@@ -1,0 +1,182 @@
+---
+export const prerender = false;
+
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { ROLES, ROLE_DUTY, ROLE_LABEL, isRole } from "../lib/access";
+import { AUTH_MODE_LABEL, getAuthProvider } from "../lib/auth";
+import { recordAudit } from "../lib/audit";
+
+const provider = getAuthProvider(Astro);
+const params = Astro.url.searchParams;
+
+function safeNext(value: string | null): string
+{
+	if (!value || !value.startsWith("/") || value.startsWith("//"))
+	{
+		return "/account/";
+	}
+	return value;
+}
+
+const next = safeNext(params.get("next"));
+const policy = await provider.getPolicy();
+const existing = await provider.getUser();
+
+if (existing && Astro.request.method === "GET")
+{
+	return Astro.redirect(next);
+}
+
+let message: string | null = params.get("error");
+let tone: "error" | "ok" = "error";
+let sentTo: string | null = null;
+
+if (Astro.request.method === "POST")
+{
+	const form = await Astro.request.formData();
+	const action = String(form.get("action") ?? "");
+	const postNext = safeNext(String(form.get("next") ?? next));
+	const callback = new URL(`/auth/callback/?next=${encodeURIComponent(postNext)}`, Astro.url.origin).toString();
+	if (action === "github")
+	{
+		const result = await provider.signInWithGitHub(callback);
+		if (result.url)
+		{
+			return Astro.redirect(result.url);
+		}
+		message = result.error ?? "无法发起 GitHub 登录。";
+	}
+	else if (action === "email")
+	{
+		const email = String(form.get("email") ?? "").trim();
+		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+		{
+			message = "邮箱格式不正确。";
+		}
+		else
+		{
+			const result = await provider.signInWithEmailOtp(email, callback);
+			if (result.error)
+			{
+				message = result.error;
+			}
+			else
+			{
+				sentTo = email;
+				tone = "ok";
+				await recordAudit(Astro, { action: "auth.otp_requested", detail: { email } });
+			}
+		}
+	}
+	else if (action === "dev" && provider.devSignIn)
+	{
+		const role = String(form.get("role") ?? "");
+		if (!isRole(role))
+		{
+			message = "未知角色。";
+		}
+		else
+		{
+			await provider.devSignIn(role);
+			await recordAudit(Astro, { action: "auth.dev_sign_in", detail: { role } });
+			return Astro.redirect(postNext);
+		}
+	}
+	else
+	{
+		message = "无法识别的登录方式。";
+	}
+}
+---
+
+<BaseLayout title="登录" description="花切维基的身份入口：GitHub OAuth 与邮箱一次性链接登录。">
+	<div class="wrap narrow">
+		<p class="eyebrow">Wiki Access</p>
+		<h1>登录</h1>
+		<p class="lede">
+			本站的条目内容对所有人开放阅读；写权限按角色发放，默认只对站长开放。
+			登录只用于识别身份与记录修订归属。
+		</p>
+
+		<div class="notice">
+			<p><strong>身份服务：{AUTH_MODE_LABEL[provider.mode]}</strong></p>
+			<p class="muted">
+				公开编辑：{policy.openEditing ? "已开放" : "未开放，条目修改暂由站长处理"} ·
+				自助注册：{policy.openRegistration ? "允许" : "不允许，账号由邀请产生"}
+			</p>
+		</div>
+
+		{message && <div class="notice notice-error">{message}</div>}
+		{sentTo && (
+			<div class="notice notice-ok">
+				一次性登录链接已发往 <strong>{sentTo}</strong>。请在邮件中点击该链接完成登录；同一链接换设备打开会失败，这是刻意设计。
+			</div>
+		)}
+
+		{provider.mode === "supabase" && (
+			<section class="section">
+				<div class="section-head">
+					<h2>GitHub</h2>
+					<span class="more">OAuth 2.0 + PKCE</span>
+				</div>
+				<form method="post">
+					<input type="hidden" name="next" value={next} />
+					<button class="btn btn-primary" type="submit" name="action" value="github">使用 GitHub 登录</button>
+				</form>
+				<p class="muted">
+					授权范围只取公开资料与邮箱，不申请仓库权限。首次登录默认获得「读者」角色。
+				</p>
+			</section>
+		)}
+
+		{provider.mode === "supabase" && (
+			<section class="section">
+				<div class="section-head">
+					<h2>邮箱</h2>
+					<span class="more">Magic Link</span>
+				</div>
+				<form method="post" class="inline-form">
+					<input type="hidden" name="next" value={next} />
+					<input type="email" name="email" placeholder="you@example.com" required autocomplete="email" />
+					<button class="btn" type="submit" name="action" value="email">发送登录链接</button>
+				</form>
+				<p class="muted">
+					不设密码：本站不保存任何口令，避免口令泄露与重置带来的风险面。
+					{policy.openRegistration ? "未注册的邮箱会自动建号。" : "未受邀邮箱不会建号。"}
+				</p>
+			</section>
+		)}
+
+		{provider.mode === "mock" && (
+			<section class="section">
+				<div class="section-head">
+					<h2>本地角色切换</h2>
+					<span class="more">仅开发环境</span>
+				</div>
+				<p class="muted">
+					当前未配置 Supabase，走本地开发模式。选一个角色即可体验对应的权限边界，
+					会话与设备信息写入 <code>.local-data/</code>。
+				</p>
+				<div class="role-picker">
+					{ROLES.map((role) => (
+						<form method="post">
+							<input type="hidden" name="next" value={next} />
+							<input type="hidden" name="role" value={role} />
+							<button class="role-option" type="submit" name="action" value="dev">
+								<strong>{ROLE_LABEL[role]}</strong>
+								<span>{ROLE_DUTY[role]}</span>
+							</button>
+						</form>
+					))}
+				</div>
+			</section>
+		)}
+
+		{provider.mode === "disabled" && (
+			<div class="notice">
+				未配置 <code>PUBLIC_SUPABASE_URL</code> 与 <code>PUBLIC_SUPABASE_ANON_KEY</code>，
+				且当前不是开发环境，登录入口不可用。公开阅读不受影响。
+			</div>
+		)}
+	</div>
+</BaseLayout>

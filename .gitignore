@@ -5,5 +5,13 @@ dist/
 .DS_Store
 *.log
 
+.local-data/
+.env
+.env.*
+!.env.example
+
+.wrangler/
+supabase/.temp/
+
 public/media/**/*.mp4
 public/media/**/*.webm

@@ -1,0 +1,136 @@
+---
+export const prerender = false;
+
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import GuardNotice from "../../components/GuardNotice.astro";
+import RoleBadge from "../../components/RoleBadge.astro";
+import { isRole, requiredRole, ROLES, ROLE_LABEL } from "../../lib/access";
+import { getAuthProvider } from "../../lib/auth";
+import { recordAudit } from "../../lib/audit";
+
+const provider = getAuthProvider(Astro);
+const auth = Astro.locals.auth;
+const allowed = auth.can("user.manage_role");
+
+let notice: string | null = null;
+let tone: "ok" | "error" = "ok";
+
+if (allowed && Astro.request.method === "POST")
+{
+	const form = await Astro.request.formData();
+	const action = String(form.get("action") ?? "");
+	const target = String(form.get("targetId") ?? "");
+	if (action === "role")
+	{
+		const role = String(form.get("role") ?? "");
+		if (!isRole(role))
+		{
+			notice = "未知角色。";
+			tone = "error";
+		}
+		else
+		{
+			const result = await provider.setMemberRole(target, role);
+			await recordAudit(Astro, {
+				action: "user.role_change",
+				targetType: "member",
+				targetId: target,
+				detail: { role, error: result.error }
+			});
+			notice = result.error ?? `已把该成员设为${ROLE_LABEL[role]}。`;
+			tone = result.error ? "error" : "ok";
+		}
+	}
+	else if (action === "suspend")
+	{
+		const suspended = String(form.get("suspended") ?? "") === "true";
+		const result = await provider.setMemberSuspended(target, suspended);
+		await recordAudit(Astro, {
+			action: suspended ? "user.suspend" : "user.restore",
+			targetType: "member",
+			targetId: target,
+			detail: { error: result.error }
+		});
+		notice = result.error ?? (suspended ? "已停用该账号。" : "已恢复该账号。");
+		tone = result.error ? "error" : "ok";
+	}
+	else
+	{
+		notice = "无法识别的操作。";
+		tone = "error";
+	}
+}
+
+const members = allowed ? await provider.listMembers() : [];
+
+function stamp(value: string): string
+{
+	const date = new Date(value);
+	return Number.isNaN(date.getTime()) ? value : date.toLocaleString("zh-CN", { hour12: false });
+}
+---
+
+<BaseLayout title="用户与角色" description="分配角色、停用账号。">
+	<div class="wrap">
+		<p class="eyebrow">Office / Users</p>
+		<h1>用户与角色</h1>
+
+		{!allowed && (
+			<GuardNotice capability="user.manage_role" currentRole={auth.role} minimumRole={requiredRole("user.manage_role", auth.policy)} />
+		)}
+
+		{allowed && (
+			<>
+				{notice && <div class={`notice ${tone === "error" ? "notice-error" : "notice-ok"}`}>{notice}</div>}
+
+				<p class="lede">
+					角色只能由站长调整，且不能调整自己；管理员可停用账号但不能改角色。站长账号不可被停用。
+				</p>
+
+				<div class="section">
+					<div class="section-head">
+						<h2>成员</h2>
+						<span class="more">共 {members.length} 人</span>
+					</div>
+					{members.length === 0 && <p class="empty">暂无成员记录。</p>}
+					{members.map((member) => (
+						<div class="panel" style="margin-bottom:1rem">
+							<p>
+								<strong>{member.displayName || member.email}</strong> <RoleBadge role={member.role} />
+								{member.suspended && <span class="badge badge-disputed">已停用</span>}
+								{member.id === auth.user?.id && <span class="badge role-owner">本人</span>}
+							</p>
+							<p class="muted">
+								{member.email} · 加入 {stamp(member.createdAt)} · 最近活动 {stamp(member.lastSeenAt)}
+							</p>
+							<div class="inline-form">
+								<form method="post" class="inline-form">
+									<input type="hidden" name="targetId" value={member.id} />
+									<select name="role" class="btn btn-small">
+										{ROLES.map((role) => (
+											<option value={role} selected={role === member.role}>
+												{ROLE_LABEL[role]}
+											</option>
+										))}
+									</select>
+									<button class="btn btn-small" type="submit" name="action" value="role" disabled={member.id === auth.user?.id}>
+										改角色
+									</button>
+								</form>
+								{member.role !== "owner" && (
+									<form method="post">
+										<input type="hidden" name="targetId" value={member.id} />
+										<input type="hidden" name="suspended" value={member.suspended ? "false" : "true"} />
+										<button class="btn btn-small btn-danger" type="submit" name="action" value="suspend">
+											{member.suspended ? "恢复账号" : "停用账号"}
+										</button>
+									</form>
+								)}
+							</div>
+						</div>
+					))}
+				</div>
+			</>
+		)}
+	</div>
+</BaseLayout>

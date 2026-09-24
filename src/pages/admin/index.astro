@@ -1,0 +1,173 @@
+---
+export const prerender = false;
+
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import GuardNotice from "../../components/GuardNotice.astro";
+import { requiredRole } from "../../lib/access";
+import { AUTH_MODE_LABEL, getAuthProvider } from "../../lib/auth";
+import { recordAudit } from "../../lib/audit";
+
+const provider = getAuthProvider(Astro);
+const auth = Astro.locals.auth;
+const allowed = auth.can("site.audit");
+
+let notice: string | null = null;
+let tone: "ok" | "error" = "ok";
+
+if (allowed && Astro.request.method === "POST")
+{
+	const form = await Astro.request.formData();
+	if (String(form.get("action") ?? "") === "review" && auth.can("revision.review"))
+	{
+		const id = String(form.get("revisionId") ?? "");
+		const decision = String(form.get("decision") ?? "") === "approved" ? "approved" : "rejected";
+		const note = String(form.get("note") ?? "");
+		const result = await provider.reviewRevision(id, decision, note);
+		await recordAudit(Astro, {
+			action: decision === "approved" ? "revision.approve" : "revision.reject",
+			targetType: "revision",
+			targetId: id,
+			detail: { error: result.error }
+		});
+		notice = result.error ?? (decision === "approved" ? "已通过该修订。" : "已驳回该修订。");
+		tone = result.error ? "error" : "ok";
+	}
+	else
+	{
+		notice = "当前身份不能执行该操作。";
+		tone = "error";
+	}
+}
+
+const stats = allowed ? await provider.stats() : null;
+const audit = allowed ? await provider.listAudit(25) : [];
+const pending = allowed ? await provider.listRevisions({ status: "pending", limit: 20 }) : [];
+
+function stamp(value: string): string
+{
+	const date = new Date(value);
+	return Number.isNaN(date.getTime()) ? value : date.toLocaleString("zh-CN", { hour12: false });
+}
+---
+
+<BaseLayout title="站务台" description="站点开关、修订队列与审计日志。">
+	<div class="wrap">
+		<p class="eyebrow">Office</p>
+		<h1>站务台</h1>
+
+		{!allowed && (
+			<GuardNotice capability="site.audit" currentRole={auth.role} minimumRole={requiredRole("site.audit", auth.policy)} />
+		)}
+
+		{allowed && (
+			<>
+				{notice && <div class={`notice ${tone === "error" ? "notice-error" : "notice-ok"}`}>{notice}</div>}
+
+				<div class="stat-cards">
+					<div class="stat-card">
+						<b>{stats?.registeredEntries ?? 0}</b>
+						<span>已登记条目</span>
+					</div>
+					<div class="stat-card">
+						<b>{stats?.revisionsPending ?? 0}</b>
+						<span>待审修订</span>
+					</div>
+					<div class="stat-card">
+						<b>{stats?.revisionsPublished ?? 0}</b>
+						<span>已发布修订</span>
+					</div>
+					<div class="stat-card">
+						<b>{stats?.users ?? 0}</b>
+						<span>账号数</span>
+					</div>
+				</div>
+
+				<div class="section">
+					<div class="section-head">
+						<h2>站点开关</h2>
+						<span class="more">{AUTH_MODE_LABEL[provider.mode]}</span>
+					</div>
+					<dl class="label-table">
+						<div class="row">
+							<dt>公开编辑</dt>
+							<dd>
+								{auth.policy.openEditing ? "已开放" : "未开放"}
+								<span class="muted">
+									· 全局总闸。关闭时所有条目的修改都只对管理员以上生效。
+								</span>
+							</dd>
+						</div>
+						<div class="row">
+							<dt>自助注册</dt>
+							<dd>
+								{auth.policy.openRegistration ? "允许" : "不允许"}
+								<span class="muted">· 关闭时新账号只能由邀请产生。</span>
+							</dd>
+						</div>
+						<div class="row">
+							<dt>条目保护</dt>
+							<dd>
+								默认「仅站长可改」
+								<span class="muted">· 单条目的保护级别在 entries 表中逐条设置。</span>
+							</dd>
+						</div>
+					</dl>
+					{!auth.can("site.settings") && <p class="muted">开关的可写入口只对站长开放。</p>}
+				</div>
+
+				<div class="section">
+					<div class="section-head">
+						<h2>待审修订</h2>
+						<span class="more">共 {pending.length} 条</span>
+					</div>
+					{pending.length === 0 && <p class="empty">没有待审修订。</p>}
+					{pending.map((revision) => (
+						<div class="panel" style="margin-bottom:1rem">
+							<p>
+								<strong>{revision.collection}/{revision.slug}</strong>
+								<span class="badge">{revision.status}</span>
+							</p>
+							<p class="muted">
+								提交人 {revision.authorEmail ?? revision.authorId} · {stamp(revision.createdAt)}
+							</p>
+							{revision.note && <p>{revision.note}</p>}
+							{!auth.can("revision.review") ? (
+								<p class="muted">只有管理员以上可以审核。</p>
+							) : (
+								<form method="post" class="inline-form">
+									<input type="hidden" name="revisionId" value={revision.id} />
+									<input type="text" name="note" placeholder="审核意见（可选）" />
+									<button class="btn btn-small" type="submit" name="decision" value="approved">通过</button>
+									<button class="btn btn-small btn-danger" type="submit" name="decision" value="rejected">驳回</button>
+								</form>
+							)}
+						</div>
+					))}
+				</div>
+
+				<div class="section">
+					<div class="section-head">
+						<h2>审计日志</h2>
+						<span class="more">最近 {audit.length} 条</span>
+					</div>
+					{audit.length === 0 && <p class="empty">暂无记录。</p>}
+					{audit.length > 0 && (
+						<ul class="audit-list">
+							{audit.map((row) => (
+								<li>
+									<span class="when">{stamp(row.at)}</span>
+									<span class="what">
+										<code>{row.action}</code>
+										{row.actor && <> · {row.actor}</>}
+										{row.targetId && <> · {row.targetId}</>}
+										{Object.keys(row.detail).length > 0 && <> · {JSON.stringify(row.detail)}</>}
+									</span>
+								</li>
+							))}
+						</ul>
+					)}
+				</div>
+			</>
+		)}
+	</div>
+</BaseLayout>

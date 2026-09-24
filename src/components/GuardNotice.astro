@@ -1,0 +1,20 @@
+---
+import { CAPABILITY_LABEL, ROLE_LABEL, type Capability, type Role } from "../lib/access";
+
+interface Props
+{
+	capability: Capability;
+	currentRole: Role | null;
+	minimumRole: Role;
+}
+
+const { capability, currentRole, minimumRole } = Astro.props;
+---
+
+<div class="notice guard-notice">
+	<p><strong>权限不足：{CAPABILITY_LABEL[capability]}</strong></p>
+	<p class="muted">
+		当前身份：{currentRole ? ROLE_LABEL[currentRole] : "未登录"}；该操作要求至少 {ROLE_LABEL[minimumRole]}。
+	</p>
+	<p class="muted">判定在服务端完成，改动前端代码不会放行。</p>
+</div>

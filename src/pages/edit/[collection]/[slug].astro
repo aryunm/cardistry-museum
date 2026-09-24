@@ -1,0 +1,127 @@
+---
+export const prerender = false;
+
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import GuardNotice from "../../../components/GuardNotice.astro";
+import { requiredRole } from "../../../lib/access";
+import { getAuthProvider } from "../../../lib/auth";
+import { recordAudit } from "../../../lib/audit";
+
+const provider = getAuthProvider(Astro);
+const auth = Astro.locals.auth;
+const collection = Astro.params.collection ?? "";
+const slug = Astro.params.slug ?? "";
+const known = ["moves", "artists", "decks"].includes(collection);
+
+let notice: string | null = null;
+let tone: "ok" | "error" = "ok";
+
+const guard = known ? await provider.getEntryGuard(collection, slug) : { protection: "owner_only" as const, canEdit: false, reason: "未知的条目类型。" };
+
+if (known && guard.canEdit && Astro.request.method === "POST")
+{
+	const form = await Astro.request.formData();
+	const result = await provider.submitRevision({
+		collection,
+		slug,
+		title: String(form.get("title") ?? slug),
+		note: String(form.get("note") ?? ""),
+		body: String(form.get("body") ?? "")
+	});
+	await recordAudit(Astro, {
+		action: "revision.submit",
+		targetType: collection,
+		targetId: slug,
+		detail: { revisionId: result.id, error: result.error }
+	});
+	notice = result.error ?? "修订已提交。管理员以上直接生效，其余角色进入待审队列。";
+	tone = result.error ? "error" : "ok";
+}
+
+const revisions = known ? await provider.listRevisions({ collection, slug, limit: 10 }) : [];
+
+function stamp(value: string): string
+{
+	const date = new Date(value);
+	return Number.isNaN(date.getTime()) ? value : date.toLocaleString("zh-CN", { hour12: false });
+}
+---
+
+<BaseLayout title={`编辑 ${slug}`} description="提交条目修订。">
+	<div class="wrap">
+		<p class="crumbs"><a href="/">首页</a> / <a href={`/${collection}/`}>{collection}</a> / {slug}</p>
+		<p class="eyebrow">Edit / {collection}</p>
+		<h1>{slug}</h1>
+
+		{notice && <div class={`notice ${tone === "error" ? "notice-error" : "notice-ok"}`}>{notice}</div>}
+
+		{!known && <div class="notice notice-error">未知的条目类型：{collection}</div>}
+
+		{known && !auth.can("entry.propose") && (
+			<GuardNotice capability="entry.propose" currentRole={auth.role} minimumRole={requiredRole("entry.propose", auth.policy)} />
+		)}
+
+		{known && auth.can("entry.propose") && !guard.canEdit && (
+			<div class="notice">
+				<p><strong>该条目当前不可编辑</strong></p>
+				<p class="muted">{guard.reason}</p>
+				<p class="muted">
+					保护级别：<code>{guard.protection === "owner_only" ? "仅站长可改" : "已开放"}</code>
+				</p>
+			</div>
+		)}
+
+		{known && guard.canEdit && (
+			<div class="section">
+				<div class="section-head">
+					<h2>提交修订</h2>
+					<span class="more">保护级别 {guard.protection === "owner_only" ? "仅站长可改" : "已开放"}</span>
+				</div>
+				<p class="lede">
+					提交的内容先落库，由管理员以上审核后才进入发布流程；正文写入前会先过内容校验规则。
+					提交记录会带上你的账号与来源地址。
+				</p>
+				<form method="post">
+					<p>
+						<label>
+							标题
+							<input type="text" name="title" value={slug} />
+						</label>
+					</p>
+					<p>
+						<label>
+							修订说明
+							<input type="text" name="note" placeholder="一句话说明改了什么" />
+						</label>
+					</p>
+					<p>
+						<textarea name="body" placeholder="正文（Markdown）" required></textarea>
+					</p>
+					<button class="btn btn-primary" type="submit">提交修订</button>
+				</form>
+			</div>
+		)}
+
+		<div class="section">
+			<div class="section-head">
+				<h2>修订记录</h2>
+				<span class="more">最近 {revisions.length} 条</span>
+			</div>
+			{revisions.length === 0 && <p class="empty">该条目还没有修订记录。</p>}
+			{revisions.length > 0 && (
+				<ul class="audit-list">
+					{revisions.map((revision) => (
+						<li>
+							<span class="when">{stamp(revision.createdAt)}</span>
+							<span class="what">
+								<code>{revision.status}</code> · {revision.authorEmail ?? revision.authorId}
+								{revision.note && <> · {revision.note}</>}
+								{revision.reviewNote && <> · 审核意见：{revision.reviewNote}</>}
+							</span>
+						</li>
+					))}
+				</ul>
+			)}
+		</div>
+	</div>
+</BaseLayout>

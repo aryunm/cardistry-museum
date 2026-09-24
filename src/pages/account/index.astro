@@ -1,0 +1,109 @@
+---
+export const prerender = false;
+
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import RoleBadge from "../../components/RoleBadge.astro";
+import { CAPABILITIES, CAPABILITY_LABEL, can, ROLES, ROLE_DUTY, ROLE_LABEL } from "../../lib/access";
+import { AUTH_MODE_LABEL, getAuthProvider } from "../../lib/auth";
+
+const provider = getAuthProvider(Astro);
+const auth = Astro.locals.auth;
+
+if (!auth.user)
+{
+	return Astro.redirect("/login/?next=%2Faccount%2F");
+}
+
+const user = auth.user;
+const sessions = await provider.listSessions();
+const member = user;
+
+function stamp(value: string): string
+{
+	const date = new Date(value);
+	return Number.isNaN(date.getTime()) ? value : date.toLocaleString("zh-CN", { hour12: false });
+}
+---
+
+<BaseLayout title="账号" description="查看当前身份、角色权限与登录设备。">
+	<div class="wrap">
+		<p class="eyebrow">Account</p>
+		<h1>账号</h1>
+
+		<div class="section">
+			<dl class="label-table">
+				<div class="row">
+					<dt>显示名</dt>
+					<dd>{member.displayName}</dd>
+				</div>
+				<div class="row">
+					<dt>邮箱</dt>
+					<dd>{member.email}</dd>
+				</div>
+				<div class="row">
+					<dt>角色</dt>
+					<dd><RoleBadge role={member.role} /> <span class="muted">{ROLE_DUTY[member.role]}</span></dd>
+				</div>
+				<div class="row">
+					<dt>加入时间</dt>
+					<dd>{stamp(member.createdAt)}</dd>
+				</div>
+				<div class="row">
+					<dt>身份服务</dt>
+					<dd>{AUTH_MODE_LABEL[provider.mode]}</dd>
+				</div>
+				<div class="row">
+					<dt>登录设备</dt>
+					<dd><a href="/account/sessions/">{sessions.length} 台</a> · <a href="/account/sessions/">管理与吊销</a></dd>
+				</div>
+			</dl>
+		</div>
+
+		<div class="section">
+			<div class="section-head">
+				<h2>权限矩阵</h2>
+				<span class="more">当前角色：{ROLE_LABEL[member.role]}</span>
+			</div>
+			<table class="perm-matrix">
+				<thead>
+					<tr>
+						<th>能力</th>
+						{ROLES.map((role) => <th>{ROLE_LABEL[role]}</th>)}
+					</tr>
+				</thead>
+				<tbody>
+					{CAPABILITIES.map((capability) => (
+						<tr>
+							<td>{CAPABILITY_LABEL[capability]}</td>
+							{ROLES.map((role) => (
+								<td class={can(role, capability, auth.policy) ? "yes" : "no"}>
+									{can(role, capability, auth.policy) ? "✓" : "—"}
+								</td>
+							))}
+						</tr>
+					))}
+				</tbody>
+			</table>
+			<p class="muted">
+				公开编辑：{auth.policy.openEditing ? "已开放" : "未开放"}。未开放时，「提交修订」只对管理员以上生效，
+				条目修改暂时由站长处理。
+			</p>
+		</div>
+
+		<div class="section">
+			<div class="section-head">
+				<h2>操作</h2>
+			</div>
+			<div class="chip-row">
+				<a class="btn" href="/account/sessions/">设备会话</a>
+				{auth.can("site.audit") && <a class="btn" href="/admin/">站务台</a>}
+				{auth.can("user.manage_role") && <a class="btn" href="/admin/users/">用户与角色</a>}
+			</div>
+			<form method="post" action="/logout/" class="inline-form" style="margin-top:1.2rem">
+				<button class="btn" type="submit" name="scope" value="local">登出本设备</button>
+				<button class="btn" type="submit" name="scope" value="others">登出其他设备</button>
+				<button class="btn btn-danger" type="submit" name="scope" value="global">登出全部设备</button>
+			</form>
+		</div>
+	</div>
+</BaseLayout>

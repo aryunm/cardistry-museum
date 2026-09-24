@@ -1,0 +1,144 @@
+---
+export const prerender = false;
+
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getAuthProvider } from "../../lib/auth";
+import { recordAudit } from "../../lib/audit";
+
+const provider = getAuthProvider(Astro);
+const auth = Astro.locals.auth;
+
+if (!auth.user)
+{
+	return Astro.redirect("/login/?next=%2Faccount%2Fsessions%2F");
+}
+
+let notice: string | null = null;
+let tone: "ok" | "error" = "ok";
+
+if (Astro.request.method === "POST")
+{
+	const form = await Astro.request.formData();
+	const action = String(form.get("action") ?? "");
+	if (action === "revoke")
+	{
+		const target = String(form.get("sessionId") ?? "");
+		const result = await provider.revokeSession(target);
+		await recordAudit(Astro, {
+			action: "session.revoke",
+			targetType: "session",
+			targetId: target,
+			detail: { error: result.error }
+		});
+		notice = result.error ?? "已吊销该设备的登录状态。";
+		tone = result.error ? "error" : "ok";
+	}
+	else if (action === "revoke-others")
+	{
+		const result = await provider.signOut("others");
+		await recordAudit(Astro, { action: "session.revoke_others", detail: { error: result.error } });
+		notice = result.error ?? "已吊销除本设备以外的全部会话。";
+		tone = result.error ? "error" : "ok";
+	}
+	else
+	{
+		notice = "无法识别的操作。";
+		tone = "error";
+	}
+}
+
+const sessions = await provider.listSessions();
+
+function stamp(value: string): string
+{
+	const date = new Date(value);
+	return Number.isNaN(date.getTime()) ? value : date.toLocaleString("zh-CN", { hour12: false });
+}
+
+function describeAgent(agent: string): string
+{
+	const browser = /Edg\//.test(agent)
+		? "Edge"
+		: /Chrome\//.test(agent)
+			? "Chrome"
+			: /Firefox\//.test(agent)
+				? "Firefox"
+				: /Safari\//.test(agent)
+					? "Safari"
+					: "未知浏览器";
+	const platform = /Windows/.test(agent)
+		? "Windows"
+		: /Android/.test(agent)
+			? "Android"
+			: /iPhone|iPad/.test(agent)
+				? "iOS"
+				: /Mac OS X/.test(agent)
+					? "macOS"
+					: /Linux/.test(agent)
+						? "Linux"
+						: "未知系统";
+	return `${browser} · ${platform}`;
+}
+---
+
+<BaseLayout title="设备会话" description="查看并吊销已登录的设备会话。">
+	<div class="wrap">
+		<p class="eyebrow">Account / Sessions</p>
+		<h1>设备会话</h1>
+		<p class="lede">
+			每台设备登录后各自持有一条会话记录。吊销某条记录后，该设备在访问令牌自然到期时失去访问权，
+			无需等待对方主动登出。
+		</p>
+
+		{notice && <div class={`notice ${tone === "error" ? "notice-error" : "notice-ok"}`}>{notice}</div>}
+
+		<div class="section">
+			<div class="section-head">
+				<h2>已登录设备</h2>
+				<span class="more">共 {sessions.length} 台</span>
+			</div>
+			{sessions.length === 0 && <p class="empty">没有可显示的会话记录。</p>}
+			{sessions.length > 0 && (
+				<ul class="session-list">
+					{sessions.map((session) => (
+						<li class={`session-row${session.current ? " is-current" : ""}`}>
+							<div>
+								<p class="session-agent">
+									{describeAgent(session.userAgent)}
+									{session.current && <span class="badge role-owner">本设备</span>}
+								</p>
+								<p class="session-meta">
+									来源 {session.ip} · 建立 {stamp(session.createdAt)} · 最近活动 {stamp(session.lastSeenAt)}
+								</p>
+							</div>
+							{session.current ? (
+								<span class="muted">当前会话</span>
+							) : (
+								<form method="post">
+									<input type="hidden" name="sessionId" value={session.id} />
+									<button class="btn btn-small btn-danger" type="submit" name="action" value="revoke">
+										吊销
+									</button>
+								</form>
+							)}
+						</li>
+					))}
+				</ul>
+			)}
+		</div>
+
+		<div class="section">
+			<div class="section-head">
+				<h2>批量操作</h2>
+			</div>
+			<div class="inline-form">
+				<form method="post">
+					<button class="btn" type="submit" name="action" value="revoke-others">吊销其他全部设备</button>
+				</form>
+				<form method="post" action="/logout/">
+					<button class="btn btn-danger" type="submit" name="scope" value="global">登出全部设备</button>
+				</form>
+			</div>
+		</div>
+	</div>
+</BaseLayout>

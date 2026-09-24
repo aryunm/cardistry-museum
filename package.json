@@ -11,9 +11,13 @@
     "validate": "node scripts/validate-content.mjs"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.117.1",
     "astro": "^5.0.0"
   },
   "devDependencies": {
+    "@astrojs/cloudflare": "^12.6.13",
+    "@astrojs/node": "^9.5.5",
     "yaml": "^2.9.1"
   }
 }

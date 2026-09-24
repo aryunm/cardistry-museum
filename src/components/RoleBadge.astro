@@ -1,0 +1,12 @@
+---
+import { ROLE_LABEL, type Role } from "../lib/access";
+
+interface Props
+{
+	role: Role;
+}
+
+const { role } = Astro.props;
+---
+
+<span class={`badge role-badge role-${role}`}>{ROLE_LABEL[role]}</span>

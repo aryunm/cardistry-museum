@@ -1,0 +1,63 @@
+---
+---
+
+<div class="account-menu" data-account-menu>
+	<a class="account-login" href="/login/" data-account-guest>登录</a>
+	<div class="account-user" data-account-user hidden></div>
+</div>
+
+<script>
+	const root = document.querySelector("[data-account-menu]");
+	const guest = root?.querySelector("[data-account-guest]");
+	const slot = root?.querySelector("[data-account-user]");
+
+	function render(payload)
+	{
+		if (!root || !slot || !guest)
+		{
+			return;
+		}
+		if (!payload.authenticated)
+		{
+			guest.hidden = false;
+			slot.hidden = true;
+			return;
+		}
+		guest.hidden = true;
+		slot.hidden = false;
+		slot.textContent = "";
+		const identity = document.createElement("a");
+		identity.className = "account-identity";
+		identity.href = "/account/";
+		const name = document.createElement("span");
+		name.className = "account-name";
+		name.textContent = payload.displayName;
+		const badge = document.createElement("span");
+		badge.className = `badge role-badge role-${payload.role}`;
+		badge.textContent = payload.roleLabel;
+		identity.append(name, badge);
+		const links = document.createElement("span");
+		links.className = "account-links";
+		for (const item of payload.nav)
+		{
+			const link = document.createElement("a");
+			link.href = item.href;
+			link.textContent = item.label;
+			links.append(link);
+		}
+		const form = document.createElement("form");
+		form.method = "post";
+		form.action = "/logout/";
+		const submit = document.createElement("button");
+		submit.type = "submit";
+		submit.className = "account-signout";
+		submit.textContent = "登出";
+		form.append(submit);
+		slot.append(identity, links, form);
+	}
+
+	fetch("/api/session/", { headers: { accept: "application/json" } })
+		.then((response) => (response.ok ? response.json() : null))
+		.then((payload) => render(payload ?? { authenticated: false, nav: [] }))
+		.catch(() => render({ authenticated: false, nav: [] }));
+</script>
