@@ -2,6 +2,7 @@
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { categories } from "../../data/categories";
+import { withBase } from "../../lib/url";
 
 const moves = await getCollection("moves");
 ---
@@ -22,7 +23,7 @@ const moves = await getCollection("moves");
 				const items = moves.filter((m) => m.data.category === category.key);
 				const verified = items.filter((m) => m.data.status === "verified").length;
 				return (
-					<a class="panel cat-card" href={`/categories/${category.key}/`}>
+					<a class="panel cat-card" href={withBase(`/categories/${category.key}/`)}>
 						<p class="count">
 							{String(items.length).padStart(2, "0")} 件展品 · {verified} 件已核实
 						</p>

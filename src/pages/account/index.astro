@@ -5,6 +5,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import RoleBadge from "../../components/RoleBadge.astro";
 import { CAPABILITIES, CAPABILITY_LABEL, can, ROLES, ROLE_DUTY, ROLE_LABEL } from "../../lib/access";
 import { AUTH_MODE_LABEL, getAuthProvider } from "../../lib/auth";
+import { withBase } from "../../lib/url";
 
 const provider = getAuthProvider(Astro);
 const auth = Astro.locals.auth;
@@ -54,7 +55,7 @@ function stamp(value: string): string
 				</div>
 				<div class="row">
 					<dt>登录设备</dt>
-					<dd><a href="/account/sessions/">{sessions.length} 台</a> · <a href="/account/sessions/">管理与吊销</a></dd>
+					<dd><a href={withBase("/account/sessions/")}>{sessions.length} 台</a> · <a href={withBase("/account/sessions/")}>管理与吊销</a></dd>
 				</div>
 			</dl>
 		</div>
@@ -95,11 +96,11 @@ function stamp(value: string): string
 				<h2>操作</h2>
 			</div>
 			<div class="chip-row">
-				<a class="btn" href="/account/sessions/">设备会话</a>
-				{auth.can("site.audit") && <a class="btn" href="/admin/">站务台</a>}
-				{auth.can("user.manage_role") && <a class="btn" href="/admin/users/">用户与角色</a>}
+				<a class="btn" href={withBase("/account/sessions/")}>设备会话</a>
+				{auth.can("site.audit") && <a class="btn" href={withBase("/admin/")}>站务台</a>}
+				{auth.can("user.manage_role") && <a class="btn" href={withBase("/admin/users/")}>用户与角色</a>}
 			</div>
-			<form method="post" action="/logout/" class="inline-form" style="margin-top:1.2rem">
+			<form method="post" action={withBase("/logout/")} class="inline-form" style="margin-top:1.2rem">
 				<button class="btn" type="submit" name="scope" value="local">登出本设备</button>
 				<button class="btn" type="submit" name="scope" value="others">登出其他设备</button>
 				<button class="btn btn-danger" type="submit" name="scope" value="global">登出全部设备</button>

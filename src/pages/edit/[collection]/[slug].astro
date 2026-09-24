@@ -6,6 +6,7 @@ import GuardNotice from "../../../components/GuardNotice.astro";
 import { requiredRole } from "../../../lib/access";
 import { getAuthProvider } from "../../../lib/auth";
 import { recordAudit } from "../../../lib/audit";
+import { withBase } from "../../../lib/url";
 
 const provider = getAuthProvider(Astro);
 const auth = Astro.locals.auth;
@@ -49,7 +50,7 @@ function stamp(value: string): string
 
 <BaseLayout title={`编辑 ${slug}`} description="提交条目修订。">
 	<div class="wrap">
-		<p class="crumbs"><a href="/">首页</a> / <a href={`/${collection}/`}>{collection}</a> / {slug}</p>
+		<p class="crumbs"><a href="/">首页</a> / <a href={withBase(`/${collection}/`)}>{collection}</a> / {slug}</p>
 		<p class="eyebrow">Edit / {collection}</p>
 		<h1>{slug}</h1>
 

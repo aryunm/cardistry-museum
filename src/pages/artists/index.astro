@@ -1,6 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import { withBase } from "../../lib/url";
 
 const artists = await getCollection("artists");
 const moves = await getCollection("moves");
@@ -26,7 +27,7 @@ const withCounts = artists
 
 		<div class="grid grid-wide">
 			{withCounts.map(({ artist, count }) => (
-				<a class="panel cat-card" href={`/artists/${artist.id}/`}>
+				<a class="panel cat-card" href={withBase(`/artists/${artist.id}/`)}>
 					<p class="count">{String(count).padStart(2, "0")} 件关联展品</p>
 					<h3>{artist.data.name}</h3>
 					<p class="en">{artist.data.nameEn}</p>

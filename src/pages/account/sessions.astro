@@ -4,13 +4,14 @@ export const prerender = false;
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getAuthProvider } from "../../lib/auth";
 import { recordAudit } from "../../lib/audit";
+import { withBase } from "../../lib/url";
 
 const provider = getAuthProvider(Astro);
 const auth = Astro.locals.auth;
 
 if (!auth.user)
 {
-	return Astro.redirect("/login/?next=%2Faccount%2Fsessions%2F");
+	return Astro.redirect(`${withBase("/login/")}?next=${encodeURIComponent(withBase("/account/sessions/"))}`);
 }
 
 let notice: string | null = null;
@@ -135,7 +136,7 @@ function describeAgent(agent: string): string
 				<form method="post">
 					<button class="btn" type="submit" name="action" value="revoke-others">吊销其他全部设备</button>
 				</form>
-				<form method="post" action="/logout/">
+				<form method="post" action={withBase("/logout/")}>
 					<button class="btn btn-danger" type="submit" name="scope" value="global">登出全部设备</button>
 				</form>
 			</div>

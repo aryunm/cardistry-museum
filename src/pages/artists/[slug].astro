@@ -2,6 +2,7 @@
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import MoveCard from "../../components/MoveCard.astro";
+import { withBase } from "../../lib/url";
 
 export async function getStaticPaths()
 {
@@ -22,7 +23,7 @@ const works = moves
 	<div class="wrap">
 		<section class="section" style="margin-top:3rem;">
 			<p class="crumbs">
-				<a href="/artists/">人物馆</a> / {artist.nameEn}
+				<a href={withBase("/artists/")}>人物馆</a> / {artist.nameEn}
 			</p>
 			<p class="eyebrow">Artist</p>
 			<h1>{artist.name}</h1>

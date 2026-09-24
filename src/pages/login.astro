@@ -5,6 +5,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { ROLES, ROLE_DUTY, ROLE_LABEL, isRole } from "../lib/access";
 import { AUTH_MODE_LABEL, getAuthProvider } from "../lib/auth";
 import { recordAudit } from "../lib/audit";
+import { withBase } from "../lib/url";
 
 const provider = getAuthProvider(Astro);
 const params = Astro.url.searchParams;
@@ -13,7 +14,7 @@ function safeNext(value: string | null): string
 {
 	if (!value || !value.startsWith("/") || value.startsWith("//"))
 	{
-		return "/account/";
+		return withBase("/account/");
 	}
 	return value;
 }
@@ -36,7 +37,7 @@ if (Astro.request.method === "POST")
 	const form = await Astro.request.formData();
 	const action = String(form.get("action") ?? "");
 	const postNext = safeNext(String(form.get("next") ?? next));
-	const callback = new URL(`/auth/callback/?next=${encodeURIComponent(postNext)}`, Astro.url.origin).toString();
+	const callback = new URL(`${withBase("/auth/callback/")}?next=${encodeURIComponent(postNext)}`, Astro.url.origin).toString();
 	if (action === "github")
 	{
 		const result = await provider.signInWithGitHub(callback);

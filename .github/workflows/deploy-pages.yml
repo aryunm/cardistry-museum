@@ -1,0 +1,85 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 构建静态站
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出
+        uses: actions/checkout@v4
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 计算站点地址与 base
+        id: site
+        run: |
+          owner="${GITHUB_REPOSITORY%%/*}"
+          name="${GITHUB_REPOSITORY##*/}"
+          if [ "$name" = "$owner.github.io" ]; then
+            base="/"
+          else
+            base="/$name/"
+          fi
+          echo "site_url=https://$owner.github.io" >> "$GITHUB_OUTPUT"
+          echo "base_path=$base" >> "$GITHUB_OUTPUT"
+          echo "站点：https://$owner.github.io$base"
+
+      - name: 校验内容规则
+        run: npm run validate
+
+      - name: 构建
+        env:
+          SITE_URL: ${{ steps.site.outputs.site_url }}
+          BASE_PATH: ${{ steps.site.outputs.base_path }}
+        run: npm run build
+
+      - name: 关闭 Jekyll 处理
+        run: touch dist/client/.nojekyll
+
+      - name: 检查站内链接都带上了 base
+        env:
+          BASE_PATH: ${{ steps.site.outputs.base_path }}
+        run: node scripts/check-base-links.mjs
+
+      - name: 配置 Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: 上传产物
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/client
+
+  deploy:
+    name: 部署
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 部署到 Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

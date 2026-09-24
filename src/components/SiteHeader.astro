@@ -1,5 +1,6 @@
 ---
 import AccountMenu from "./AccountMenu.astro";
+import { withBase } from "../lib/url";
 
 const links = [
 	{ href: "/categories/", label: "分类" },
@@ -16,13 +17,13 @@ const current = Astro.url.pathname;
 
 <header class="site-header">
 	<div class="wrap">
-		<a class="brand" href="/">
+		<a class="brand" href={withBase("/")}>
 			<strong>花切博物馆</strong>
 			<span>Cardistry Museum</span>
 		</a>
 		<nav class="nav" aria-label="主导航">
 			{links.map((link) => (
-				<a href={link.href} aria-current={current === link.href ? "page" : undefined}>
+				<a href={withBase(link.href)} aria-current={current === withBase(link.href) ? "page" : undefined}>
 					{link.label}
 				</a>
 			))}

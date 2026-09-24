@@ -6,6 +6,7 @@ import Difficulty from "../../components/Difficulty.astro";
 import StatusBadge from "../../components/StatusBadge.astro";
 import ExhibitPoster from "../../components/ExhibitPoster.astro";
 import { categoriesByKey } from "../../data/categories";
+import { withBase } from "../../lib/url";
 
 type MoveEntry = CollectionEntry<"moves">;
 
@@ -67,7 +68,7 @@ const sourceTypeLabel: Record<string, string> = {
 	<div class="wrap">
 		<section class="section" style="margin-top:2.6rem;">
 			<p class="crumbs">
-				<a href="/moves/">馆藏索引</a> / <a href={`/categories/${move.category}/`}>{category?.name ?? move.category}</a> / {accession.get(entry.id)}
+				<a href={withBase("/moves/")}>馆藏索引</a> / <a href={withBase(`/categories/${move.category}/`)}>{category?.name ?? move.category}</a> / {accession.get(entry.id)}
 			</p>
 
 			<div class="exhibit-grid">
@@ -85,7 +86,7 @@ const sourceTypeLabel: Record<string, string> = {
 					<dl class="label-table">
 						<div class="row">
 							<dt>分类</dt>
-							<dd><a href={`/categories/${move.category}/`}>{category?.name ?? move.category}</a></dd>
+							<dd><a href={withBase(`/categories/${move.category}/`)}>{category?.name ?? move.category}</a></dd>
 						</div>
 						<div class="row">
 							<dt>难度</dt>
@@ -110,7 +111,7 @@ const sourceTypeLabel: Record<string, string> = {
 									creators.map((a, i) => (
 										<>
 											{i > 0 && "、"}
-											<a href={`/artists/${a.id}/`}>{a.data.name}</a>
+											<a href={withBase(`/artists/${a.id}/`)}>{a.data.name}</a>
 										</>
 									))
 								)}
@@ -149,7 +150,7 @@ const sourceTypeLabel: Record<string, string> = {
 									{ancestors.map((m, i) => (
 										<>
 											{i > 0 && "、"}
-											<a href={`/moves/${m.id}/`}>{m.data.title}</a>
+											<a href={withBase(`/moves/${m.id}/`)}>{m.data.title}</a>
 										</>
 									))}
 								</p>
@@ -160,7 +161,7 @@ const sourceTypeLabel: Record<string, string> = {
 									{prereqs.map((m, i) => (
 										<>
 											{i > 0 && "、"}
-											<a href={`/moves/${m.id}/`}>{m.data.title}</a>
+											<a href={withBase(`/moves/${m.id}/`)}>{m.data.title}</a>
 										</>
 									))}
 								</p>
@@ -171,7 +172,7 @@ const sourceTypeLabel: Record<string, string> = {
 									{descendants.map((m, i) => (
 										<>
 											{i > 0 && "、"}
-											<a href={`/moves/${m.id}/`}>{m.data.title}</a>
+											<a href={withBase(`/moves/${m.id}/`)}>{m.data.title}</a>
 										</>
 									))}
 								</p>

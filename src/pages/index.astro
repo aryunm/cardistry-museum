@@ -4,6 +4,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import MoveCard from "../components/MoveCard.astro";
 import StatusBadge from "../components/StatusBadge.astro";
 import { categories } from "../data/categories";
+import { withBase } from "../lib/url";
 
 const all = await getCollection("moves");
 const moves = all.sort(
@@ -41,11 +42,11 @@ const counts = new Map<string, number>(
 		<section class="section">
 			<div class="section-head">
 				<h2>动作分类</h2>
-				<a class="more" href="/categories/">全部分类 →</a>
+				<a class="more" href={withBase("/categories/")}>全部分类 →</a>
 			</div>
 			<div class="grid grid-wide">
 				{categories.map((category) => (
-					<a class="panel cat-card" href={`/categories/${category.key}/`}>
+					<a class="panel cat-card" href={withBase(`/categories/${category.key}/`)}>
 						<p class="count">{String(counts.get(category.key) ?? 0).padStart(2, "0")} 件展品</p>
 						<h3>{category.name}</h3>
 						<p class="en">{category.nameEn}</p>
@@ -58,7 +59,7 @@ const counts = new Map<string, number>(
 		<section class="section">
 			<div class="section-head">
 				<h2>今日常设展品</h2>
-				<a class="more" href="/moves/">馆藏索引 →</a>
+				<a class="more" href={withBase("/moves/")}>馆藏索引 →</a>
 			</div>
 			<div class="grid grid-moves">
 				{featured.map((entry) => <MoveCard id={entry.id} data={entry.data} />)}
@@ -79,7 +80,7 @@ const counts = new Map<string, number>(
 					<ul style="margin:0;padding-left:1.1rem;">
 						{stubs.map((entry) => (
 							<li>
-								<a href={`/moves/${entry.id}/`}>{entry.data.title}</a>
+								<a href={withBase(`/moves/${entry.id}/`)}>{entry.data.title}</a>
 								<span class="muted"> · {entry.data.titleEn}</span>{" "}
 								<StatusBadge status="stub" />
 							</li>
@@ -96,15 +97,15 @@ const counts = new Map<string, number>(
 			<div class="grid grid-wide">
 				<div class="panel">
 					<h3>路人</h3>
-					<p class="muted">从<a href="/random/">随机漫游</a>开始，每次给你一件随机展品，不必按顺序。</p>
+					<p class="muted">从<a href={withBase("/random/")}>随机漫游</a>开始，每次给你一件随机展品，不必按顺序。</p>
 				</div>
 				<div class="panel">
 					<h3>入门</h3>
-					<p class="muted">在<a href="/moves/">馆藏索引</a>里按难度筛到 1–2，按前置动作顺着练。</p>
+					<p class="muted">在<a href={withBase("/moves/")}>馆藏索引</a>里按难度筛到 1–2，按前置动作顺着练。</p>
 				</div>
 				<div class="panel">
 					<h3>老手</h3>
-					<p class="muted">看<a href="/moves/">谱系来源</a>与<a href="/credits/">考据状态</a>：哪些关系有据可查，哪些还只是社区共识。</p>
+					<p class="muted">看<a href={withBase("/moves/")}>谱系来源</a>与<a href={withBase("/credits/")}>考据状态</a>：哪些关系有据可查，哪些还只是社区共识。</p>
 				</div>
 			</div>
 		</section>

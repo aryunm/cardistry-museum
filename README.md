@@ -334,8 +334,15 @@ Cloudflare 适配器不受影响：它把平台的原生 `Request` 直接交给 
 
 ## 部署到 GitHub Pages
 
-仓库设置 → Pages → Source 选 **GitHub Actions**，用官方 Astro 模板即可。若部署在子路径
-（`https://<用户名>.github.io/<仓库名>/`），构建时传入环境变量：
+自动化已经写好：`.github/workflows/deploy-pages.yml`。推送到 `main` 即触发，它自己算出
+`SITE_URL` 与 `BASE_PATH`（仓库名不等于 `<用户名>.github.io` 时 base 取 `/<仓库名>/`），
+依次跑内容校验、构建、base 链接检查，再上传 `dist/client` 部署。
+
+**首次部署**：工作流里的 `actions/configure-pages` 带 `enablement: true`，会试着自动把 Pages 打开。
+若那一步报权限错，就手动去 **Settings → Pages → Source 选 GitHub Actions** 再重跑一次。
+仓库公开，Pages 才免费。
+
+本地复现同样的构建：
 
 ```powershell
 $env:SITE_URL="https://<用户名>.github.io"; $env:BASE_PATH="/<仓库名>/"; npm run build
@@ -343,9 +350,22 @@ $env:SITE_URL="https://<用户名>.github.io"; $env:BASE_PATH="/<仓库名>/"; n
 
 `astro.config.mjs` 读的就是这两个变量。本地开发不设置时，`base` 为 `/`。
 
-这条路线**只能承载公开阅读的部分**：登录、账号、后台、编辑是服务端路由，Pages 上没有运行时，
-需要另配一处服务端（Cloudflare Pages 或自托管），或干脆把整站放在带运行时的平台。
-详见「部署与运行环境」。
+**注意 base 要自己传到链接上**：Astro 只会给构建产物（CSS / JS）自动加 base，
+`<a href="/moves/">` 这类**手写的站内链接不会自动加**。所以站内链接统一走 `src/lib/url.ts` 的
+`withBase()`，`random.astro` 的客户端跳转用 `import.meta.env.BASE_URL`。新增页面时照此办理，
+否则子路径部署会出现「页面能打开、点任意链接 404」。
+校验办法是 `scripts/check-base-links.mjs`（读 `BASE_PATH`，默认扫 `dist/client`），
+部署工作流里跑了一遍：
+
+```powershell
+$env:BASE_PATH="/cardistry-museum/"; node scripts/check-base-links.mjs
+```
+
+托管在 Pages 上的那份**只有能预渲染的公开页面**：馆藏、人物、器物、史线、术语表、版权、404。
+登录、账号、编辑、后台都是服务端路由（`prerender = false`），静态托管上没有运行时，这些地址直接 404；
+页头检测不到身份服务时也不会渲染登录入口。要用完整功能需另配一处服务端（Cloudflare Pages 或自托管），
+或干脆把整站放在带运行时的平台。详见「部署与运行环境」。
+
 
 ## 现状与后续
 

@@ -3,6 +3,7 @@ import Difficulty from "./Difficulty.astro";
 import ExhibitPoster from "./ExhibitPoster.astro";
 import StatusBadge from "./StatusBadge.astro";
 import { categoryName } from "../data/categories";
+import { withBase } from "../lib/url";
 
 interface Props
 {
@@ -21,7 +22,7 @@ const { id, data } = Astro.props;
 const poster = data.media.find((m) => m.poster)?.poster;
 ---
 
-<a class="move-card" href={`/moves/${id}/`} data-category={data.category} data-difficulty={data.difficulty}>
+<a class="move-card" href={withBase(`/moves/${id}/`)} data-category={data.category} data-difficulty={data.difficulty}>
 	<ExhibitPoster titleEn={data.titleEn} poster={poster} hasMedia={data.media.length > 0} />
 	<div class="body">
 		<h3>{data.title}</h3>

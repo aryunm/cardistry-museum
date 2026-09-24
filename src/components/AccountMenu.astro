@@ -1,15 +1,23 @@
 ---
+import { hasSupabaseCredentials } from "../lib/env";
+import { withBase } from "../lib/url";
+
+// 没有身份服务时（例如纯静态托管）不渲染入口，免得给访问者一个必然 404 的「登录」链接。
+const authEnabled = hasSupabaseCredentials() || import.meta.env.DEV;
 ---
 
-<div class="account-menu" data-account-menu>
-	<a class="account-login" href="/login/" data-account-guest>登录</a>
-	<div class="account-user" data-account-user hidden></div>
-</div>
+{authEnabled && (
+	<div class="account-menu" data-account-menu>
+		<a class="account-login" href={withBase("/login/")} data-account-guest>登录</a>
+		<div class="account-user" data-account-user hidden></div>
+	</div>
+)}
 
 <script>
 	const root = document.querySelector("[data-account-menu]");
 	const guest = root?.querySelector("[data-account-guest]");
 	const slot = root?.querySelector("[data-account-user]");
+	const base = import.meta.env.BASE_URL;
 
 	function render(payload)
 	{
@@ -28,7 +36,7 @@
 		slot.textContent = "";
 		const identity = document.createElement("a");
 		identity.className = "account-identity";
-		identity.href = "/account/";
+		identity.href = `${base}account/`;
 		const name = document.createElement("span");
 		name.className = "account-name";
 		name.textContent = payload.displayName;
@@ -41,13 +49,13 @@
 		for (const item of payload.nav)
 		{
 			const link = document.createElement("a");
-			link.href = item.href;
+			link.href = `${base}${item.href.replace(/^\//, "")}`;
 			link.textContent = item.label;
 			links.append(link);
 		}
 		const form = document.createElement("form");
 		form.method = "post";
-		form.action = "/logout/";
+		form.action = `${base}logout/`;
 		const submit = document.createElement("button");
 		submit.type = "submit";
 		submit.className = "account-signout";
@@ -56,8 +64,11 @@
 		slot.append(identity, links, form);
 	}
 
-	fetch("/api/session/", { headers: { accept: "application/json" } })
-		.then((response) => (response.ok ? response.json() : null))
-		.then((payload) => render(payload ?? { authenticated: false, nav: [] }))
-		.catch(() => render({ authenticated: false, nav: [] }));
+	if (root)
+	{
+		fetch(`${base}api/session/`, { headers: { accept: "application/json" } })
+			.then((response) => (response.ok ? response.json() : null))
+			.then((payload) => render(payload ?? { authenticated: false, nav: [] }))
+			.catch(() => render({ authenticated: false, nav: [] }));
+	}
 </script>

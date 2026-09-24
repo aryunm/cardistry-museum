@@ -3,6 +3,7 @@ import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import MoveCard from "../../components/MoveCard.astro";
 import { categories } from "../../data/categories";
+import { withBase } from "../../lib/url";
 
 export async function getStaticPaths()
 {
@@ -22,7 +23,7 @@ const others = categories.filter((c) => c.key !== category.key);
 	<div class="wrap">
 		<section class="section" style="margin-top:3rem;">
 			<p class="crumbs">
-				<a href="/categories/">动作分类</a> / {category.nameEn}
+				<a href={withBase("/categories/")}>动作分类</a> / {category.nameEn}
 			</p>
 			<p class="eyebrow">{category.nameEn}</p>
 			<h1>{category.name}</h1>
@@ -45,7 +46,7 @@ const others = categories.filter((c) => c.key !== category.key);
 				<h2>相邻分类</h2>
 			</div>
 			<div class="chip-row">
-				{others.map((c) => <a class="chip" href={`/categories/${c.key}/`}>{c.name}</a>)}
+				{others.map((c) => <a class="chip" href={withBase(`/categories/${c.key}/`)}>{c.name}</a>)}
 			</div>
 		</section>
 	</div>

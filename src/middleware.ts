@@ -1,6 +1,7 @@
 import { defineMiddleware } from "astro:middleware";
 import { buildAccess, CLOSED_POLICY, ROLE_LABEL, requiredRole, type Capability, type Role } from "./lib/access";
 import { getAuthProvider } from "./lib/auth";
+import { withBase } from "./lib/url";
 
 interface RouteGuard
 {
@@ -69,7 +70,7 @@ a { color: #d8b46a; }
 <p>目标路径：<code>${escapeHtml(pathname)}</code></p>
 <p>当前身份：${role ? escapeHtml(ROLE_LABEL[role]) : "未登录"}；该路径要求至少 <code>${escapeHtml(ROLE_LABEL[minimum])}</code> 才能访问。</p>
 <p>判定发生在服务端，改前端代码不会放行。</p>
-<p><a href="/">回到首页</a></p>
+<p><a href="${withBase("/")}">回到首页</a></p>
 </main>
 </body>
 </html>
@@ -105,7 +106,7 @@ export const onRequest = defineMiddleware(async (context, next) =>
 	if (!user)
 	{
 		const target = `${context.url.pathname}${context.url.search}`;
-		return context.redirect(`/login?next=${encodeURIComponent(target)}`);
+		return context.redirect(`${withBase("/login")}?next=${encodeURIComponent(target)}`);
 	}
 	if (guard.capability && !access.can(guard.capability))
 	{
