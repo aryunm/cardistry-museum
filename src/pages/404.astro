@@ -1,0 +1,33 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { withBase } from "../lib/url";
+---
+
+<BaseLayout title="没有这个条目" description="这个地址没有对应的展品，回馆藏索引或随机漫游。">
+	<div class="wrap">
+		<section class="section" style="margin-top:3rem;">
+			<p class="eyebrow">404 · Not Found</p>
+			<h1>这个编号不在馆里</h1>
+			<p class="lede">
+				地址可能写错了，也可能这件展品被移出了正馆。下面几条路能回到馆内。
+			</p>
+			<div class="grid grid-wide" style="margin-top:1.2rem;">
+				<div class="panel">
+					<h3>按分类找</h3>
+					<p class="muted">八个分类，从单手切到连招，附难度与前置关系。</p>
+					<p><a class="more" href={withBase("/categories/")}>全部分类 →</a></p>
+				</div>
+				<div class="panel">
+					<h3>馆藏索引</h3>
+					<p class="muted">全部动作条目，可按难度与考据状态筛。</p>
+					<p><a class="more" href={withBase("/moves/")}>馆藏索引 →</a></p>
+				</div>
+				<div class="panel">
+					<h3>随机漫游</h3>
+					<p class="muted">不想挑，就让页面替你抽一件。</p>
+					<p><a class="more" href={withBase("/random/")}>随机一件 →</a></p>
+				</div>
+			</div>
+		</section>
+	</div>
+</BaseLayout>
