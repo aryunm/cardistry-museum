@@ -1,0 +1,38 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const artists = await getCollection("artists");
+const moves = await getCollection("moves");
+
+const withCounts = artists
+	.map((a) => ({
+		artist: a,
+		count: moves.filter((m) => m.data.creators.includes(a.id)).length
+	}))
+	.sort((a, b) => b.count - a.count || a.artist.data.nameEn.localeCompare(b.artist.data.nameEn));
+---
+
+<BaseLayout title="人物馆" description="花切动作的创作者与推广者，以及他们在这个门类里留下哪些动作。">
+	<div class="wrap">
+		<section class="section" style="margin-top:3rem;">
+			<p class="eyebrow">Artists</p>
+			<h1>人物馆</h1>
+			<p class="lede">
+				只登记有来源可查的归属关系。归属存疑的动作会留空，而不是就近挂到某个名人名下——
+				这是花切考据里最常见的失真来源。
+			</p>
+		</section>
+
+		<div class="grid grid-wide">
+			{withCounts.map(({ artist, count }) => (
+				<a class="panel cat-card" href={`/artists/${artist.id}/`}>
+					<p class="count">{String(count).padStart(2, "0")} 件关联展品</p>
+					<h3>{artist.data.name}</h3>
+					<p class="en">{artist.data.nameEn}</p>
+					<p>{artist.data.summary}</p>
+				</a>
+			))}
+		</div>
+	</div>
+</BaseLayout>

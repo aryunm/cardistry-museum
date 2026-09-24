@@ -1,0 +1,29 @@
+---
+const links = [
+	{ href: "/categories/", label: "分类" },
+	{ href: "/moves/", label: "馆藏索引" },
+	{ href: "/artists/", label: "人物馆" },
+	{ href: "/decks/", label: "器物馆" },
+	{ href: "/timeline/", label: "史馆" },
+	{ href: "/glossary/", label: "术语表" },
+	{ href: "/credits/", label: "版权" }
+];
+
+const current = Astro.url.pathname;
+---
+
+<header class="site-header">
+	<div class="wrap">
+		<a class="brand" href="/">
+			<strong>花切博物馆</strong>
+			<span>Cardistry Museum</span>
+		</a>
+		<nav class="nav" aria-label="主导航">
+			{links.map((link) => (
+				<a href={link.href} aria-current={current === link.href ? "page" : undefined}>
+					{link.label}
+				</a>
+			))}
+		</nav>
+	</div>
+</header>

@@ -1,0 +1,107 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import MoveCard from "../../components/MoveCard.astro";
+
+export async function getStaticPaths()
+{
+	const artists = await getCollection("artists");
+	return artists.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const artist = entry.data;
+
+const moves = await getCollection("moves");
+const works = moves
+	.filter((m) => m.data.creators.includes(entry.id))
+	.sort((a, b) => b.data.difficulty - a.data.difficulty);
+---
+
+<BaseLayout title={artist.name} description={artist.summary}>
+	<div class="wrap">
+		<section class="section" style="margin-top:3rem;">
+			<p class="crumbs">
+				<a href="/artists/">人物馆</a> / {artist.nameEn}
+			</p>
+			<p class="eyebrow">Artist</p>
+			<h1>{artist.name}</h1>
+			<p class="muted" style="font-family:var(--font-mono);font-size:0.8rem;letter-spacing:0.14em;text-transform:uppercase;">
+				{artist.nameEn}
+			</p>
+			<p class="lede">{artist.summary}</p>
+		</section>
+
+		{works.length > 0 && (
+			<section class="section">
+				<div class="section-head">
+					<h2>关联展品</h2>
+					<span class="more">{works.length} 件</span>
+				</div>
+				<div class="grid grid-moves">
+					{works.map((w) => <MoveCard id={w.id} data={w.data} />)}
+				</div>
+			</section>
+		)}
+
+		<section class="section">
+			<div class="section-head">
+				<h2>展签</h2>
+			</div>
+			<dl class="label-table">
+				{artist.activeFrom && (
+					<div class="row">
+						<dt>活跃时期</dt>
+						<dd>{artist.activeFrom}</dd>
+					</div>
+				)}
+				{artist.aliases.length > 0 && (
+					<div class="row">
+						<dt>别名</dt>
+						<dd>{artist.aliases.join("、")}</dd>
+					</div>
+				)}
+				{artist.affiliations.length > 0 && (
+					<div class="row">
+						<dt>所属</dt>
+						<dd>{artist.affiliations.join(" · ")}</dd>
+					</div>
+				)}
+				{artist.links.length > 0 && (
+					<div class="row">
+						<dt>外部链接</dt>
+						<dd>
+							{artist.links.map((link, i) => (
+								<>
+									{i > 0 && " · "}
+									<a href={link.url}>{link.label}</a>
+								</>
+							))}
+						</dd>
+					</div>
+				)}
+			</dl>
+		</section>
+
+		<section class="section">
+			<div class="section-head">
+				<h2>来源</h2>
+			</div>
+			{artist.sources.length === 0 ? (
+				<div class="notice">尚无独立来源。</div>
+			) : (
+				<ol class="source-list">
+					{artist.sources.map((s) => (
+						<li>
+							<span class="type">{s.type}</span>
+							{s.url ? <a href={s.url}>{s.title}</a> : s.title}
+							{(s.author || s.year) && (
+								<span class="muted"> — {[s.author, s.year].filter(Boolean).join("，")}</span>
+							)}
+						</li>
+					))}
+				</ol>
+			)}
+		</section>
+	</div>
+</BaseLayout>

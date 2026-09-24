@@ -1,0 +1,37 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { categories } from "../../data/categories";
+
+const moves = await getCollection("moves");
+---
+
+<BaseLayout title="动作分类" description="花切动作的八个分类：单手切、双手切、空中动作、展扇、落牌与弹牌、隔离与旋转、展示与定格、连招。">
+	<div class="wrap">
+		<section class="section" style="margin-top:3rem;">
+			<p class="eyebrow">Categories</p>
+			<h1>动作分类</h1>
+			<p class="lede">
+				按动作的力学结构分类，而不是按难度或人气。分类的目的是让「同类动作」放在一起比较，
+				因为你只有在同一个分类里，才看得出 A 和 B 的差别到底在哪。
+			</p>
+		</section>
+
+		<div class="grid grid-wide">
+			{categories.map((category) => {
+				const items = moves.filter((m) => m.data.category === category.key);
+				const verified = items.filter((m) => m.data.status === "verified").length;
+				return (
+					<a class="panel cat-card" href={`/categories/${category.key}/`}>
+						<p class="count">
+							{String(items.length).padStart(2, "0")} 件展品 · {verified} 件已核实
+						</p>
+						<h3>{category.name}</h3>
+						<p class="en">{category.nameEn}</p>
+						<p>{category.blurb}</p>
+					</a>
+				);
+			})}
+		</div>
+	</div>
+</BaseLayout>

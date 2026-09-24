@@ -1,0 +1,156 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import MoveCard from "../../components/MoveCard.astro";
+import { categories } from "../../data/categories";
+
+const all = await getCollection("moves");
+const moves = all.sort(
+	(a, b) => a.data.difficulty - b.data.difficulty || a.data.titleEn.localeCompare(b.data.titleEn)
+);
+---
+
+<BaseLayout title="馆藏索引" description="全部花切动作条目，可按分类、难度、考据状态与关键词筛选。">
+	<div class="wrap">
+		<section class="section" style="margin-top:3rem;">
+			<p class="eyebrow">Collection Index</p>
+			<h1>馆藏索引</h1>
+			<p class="lede">
+				默认按难度升序。筛选条件会写进地址栏，链接可以直接分享给别人。
+			</p>
+		</section>
+
+		<div class="toolbar">
+			<input id="q" type="search" placeholder="搜索中英文名、别名、标签…" aria-label="搜索展品" />
+			<div class="chip-row" id="status-filter">
+				<button class="chip on" data-status="all">全部 {moves.length}</button>
+				<button class="chip" data-status="verified">已核实</button>
+				<button class="chip" data-status="disputed">存疑</button>
+				<button class="chip" data-status="stub">待考据</button>
+			</div>
+		</div>
+
+		<div class="toolbar">
+			<div class="chip-row" id="category-filter">
+				<button class="chip on" data-category="all">全部分类</button>
+				{categories.map((category) => <button class="chip" data-category={category.key}>{category.name}</button>)}
+			</div>
+			<div class="chip-row" id="difficulty-filter">
+				<button class="chip on" data-difficulty="all">任意难度</button>
+				{[1, 2, 3, 4, 5].map((n) => <button class="chip" data-difficulty={String(n)}>≤ {n}</button>)}
+			</div>
+		</div>
+
+		<div class="grid grid-moves" id="move-grid">
+			{moves.map((entry) => (
+				<div
+					class="grid-cell"
+					data-category={entry.data.category}
+					data-difficulty={entry.data.difficulty}
+					data-status={entry.data.status}
+					data-search={[
+						entry.data.title,
+						entry.data.titleEn,
+						...entry.data.aliases,
+						...entry.data.tags,
+						entry.data.summary
+					]
+						.join(" ")
+						.toLowerCase()}
+				>
+					<MoveCard id={entry.id} data={entry.data} />
+				</div>
+			))}
+		</div>
+
+		<p class="empty" id="no-result" style="display:none;">没有符合条件的展品。</p>
+	</div>
+</BaseLayout>
+
+<script>
+	const grid = document.getElementById("move-grid");
+	const noResult = document.getElementById("no-result");
+	const cells = grid ? Array.from(grid.querySelectorAll(".grid-cell")) : [];
+
+	const state = { q: "", category: "all", status: "all", difficulty: "all" };
+
+	function readUrl()
+	{
+		const params = new URLSearchParams(location.search);
+		state.q = params.get("q") ?? "";
+		state.category = params.get("category") ?? "all";
+		state.status = params.get("status") ?? "all";
+		state.difficulty = params.get("difficulty") ?? "all";
+	}
+
+	function writeUrl()
+	{
+		const params = new URLSearchParams();
+		if (state.q) params.set("q", state.q);
+		if (state.category !== "all") params.set("category", state.category);
+		if (state.status !== "all") params.set("status", state.status);
+		if (state.difficulty !== "all") params.set("difficulty", state.difficulty);
+		const query = params.toString();
+		history.replaceState(null, "", query ? `?${query}` : location.pathname);
+	}
+
+	function syncChips(groupId, key)
+	{
+		const group = document.getElementById(groupId);
+		if (!group) return;
+		group.querySelectorAll(".chip").forEach((chip) =>
+		{
+			chip.classList.toggle("on", chip.dataset[key] === state[key]);
+		});
+	}
+
+	function apply()
+	{
+		let visible = 0;
+		cells.forEach((cell) =>
+		{
+			const matchQ = !state.q || cell.dataset.search.includes(state.q.toLowerCase());
+			const matchCategory = state.category === "all" || cell.dataset.category === state.category;
+			const matchStatus = state.status === "all" || cell.dataset.status === state.status;
+			const matchDifficulty =
+				state.difficulty === "all" || Number(cell.dataset.difficulty) <= Number(state.difficulty);
+			const ok = matchQ && matchCategory && matchStatus && matchDifficulty;
+			cell.style.display = ok ? "" : "none";
+			if (ok) visible += 1;
+		});
+		if (noResult) noResult.style.display = visible === 0 ? "" : "none";
+	}
+
+	function bindChips(groupId, key)
+	{
+		const group = document.getElementById(groupId);
+		if (!group) return;
+		group.addEventListener("click", (event) =>
+		{
+			const chip = event.target.closest(".chip");
+			if (!chip) return;
+			state[key] = chip.dataset[key];
+			syncChips(groupId, key);
+			writeUrl();
+			apply();
+		});
+	}
+
+	const search = document.getElementById("q");
+	if (search)
+	{
+		search.addEventListener("input", () =>
+		{
+			state.q = search.value.trim();
+			writeUrl();
+			apply();
+		});
+	}
+
+	readUrl();
+	if (search) search.value = state.q;
+	syncChips("category-filter", "category");
+	syncChips("status-filter", "status");
+	syncChips("difficulty-filter", "difficulty");
+	apply();
+</script>

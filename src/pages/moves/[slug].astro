@@ -1,0 +1,260 @@
+---
+import { getCollection, render } from "astro:content";
+import type { CollectionEntry } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Difficulty from "../../components/Difficulty.astro";
+import StatusBadge from "../../components/StatusBadge.astro";
+import ExhibitPoster from "../../components/ExhibitPoster.astro";
+import { categoriesByKey } from "../../data/categories";
+
+type MoveEntry = CollectionEntry<"moves">;
+
+export async function getStaticPaths()
+{
+	const moves = await getCollection("moves");
+	return moves.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const move = entry.data;
+const { Content } = await render(entry);
+
+const all = await getCollection("moves");
+const byId = new Map<string, MoveEntry>(all.map((m) => [m.id, m]));
+
+const ordered = all
+	.slice()
+	.sort((a, b) => a.data.order - b.data.order || a.data.titleEn.localeCompare(b.data.titleEn));
+const accession = new Map<string, string>(
+	ordered.map((m, index) => [m.id, `CM-${String(index + 1).padStart(3, "0")}`])
+);
+
+function resolve(ids: string[]): MoveEntry[]
+{
+	const out: MoveEntry[] = [];
+	ids.forEach((id) =>
+	{
+		const found = byId.get(id);
+		if (found) out.push(found);
+	});
+	return out;
+}
+
+const artists = await getCollection("artists");
+const artistById = new Map(artists.map((a) => [a.id, a]));
+const creators = move.creators.map((id) => artistById.get(id)).filter((a) => a !== undefined);
+
+const prereqs = resolve(move.prerequisites);
+const ancestors = resolve(move.derivedFrom);
+const descendants = all.filter((m) => m.data.derivedFrom.includes(entry.id));
+
+const category = categoriesByKey.get(move.category);
+const poster = move.media.find((m) => m.poster)?.poster;
+
+const handsLabel: Record<string, string> = { one: "单手", two: "双手", either: "单手或双手" };
+
+const sourceTypeLabel: Record<string, string> = {
+	book: "书籍",
+	video: "影像",
+	forum: "论坛",
+	wiki: "百科",
+	interview: "访谈",
+	article: "文章"
+};
+---
+
+<BaseLayout title={move.title} description={move.summary}>
+	<div class="wrap">
+		<section class="section" style="margin-top:2.6rem;">
+			<p class="crumbs">
+				<a href="/moves/">馆藏索引</a> / <a href={`/categories/${move.category}/`}>{category?.name ?? move.category}</a> / {accession.get(entry.id)}
+			</p>
+
+			<div class="exhibit-grid">
+				<div>
+					<p class="eyebrow">Exhibit {accession.get(entry.id)}</p>
+					<h1>{move.title}</h1>
+					<p class="muted" style="font-family:var(--font-mono);font-size:0.8rem;letter-spacing:0.14em;text-transform:uppercase;">
+						{move.titleEn}
+					</p>
+					<p class="lede">{move.summary}</p>
+					<ExhibitPoster titleEn={move.titleEn} poster={poster} hasMedia={move.media.length > 0} wide />
+				</div>
+
+				<aside>
+					<dl class="label-table">
+						<div class="row">
+							<dt>分类</dt>
+							<dd><a href={`/categories/${move.category}/`}>{category?.name ?? move.category}</a></dd>
+						</div>
+						<div class="row">
+							<dt>难度</dt>
+							<dd><Difficulty value={move.difficulty} /></dd>
+						</div>
+						<div class="row">
+							<dt>考据状态</dt>
+							<dd><StatusBadge status={move.status} /></dd>
+						</div>
+						<div class="row">
+							<dt>首次公开</dt>
+							<dd>
+								{move.firstPublicYear ?? <span class="muted">未确证</span>}
+							</dd>
+						</div>
+						<div class="row">
+							<dt>创作者</dt>
+							<dd>
+								{creators.length === 0 ? (
+									<span class="muted">未确证</span>
+								) : (
+									creators.map((a, i) => (
+										<>
+											{i > 0 && "、"}
+											<a href={`/artists/${a.id}/`}>{a.data.name}</a>
+										</>
+									))
+								)}
+							</dd>
+						</div>
+						<div class="row">
+							<dt>手数</dt>
+							<dd>{handsLabel[move.hands]}</dd>
+						</div>
+						{move.packets !== undefined && (
+							<div class="row">
+								<dt>包数</dt>
+								<dd>{move.packets}</dd>
+							</div>
+						)}
+						{move.aliases.length > 0 && (
+							<div class="row">
+								<dt>别名</dt>
+								<dd>{move.aliases.join("、")}</dd>
+							</div>
+						)}
+						{move.tags.length > 0 && (
+							<div class="row">
+								<dt>标签</dt>
+								<dd>{move.tags.join(" · ")}</dd>
+							</div>
+						)}
+					</dl>
+
+					{(prereqs.length > 0 || ancestors.length > 0 || descendants.length > 0) && (
+						<div class="panel" style="margin-top:20px;">
+							<h3 style="margin-bottom:0.7rem;">谱系</h3>
+							{ancestors.length > 0 && (
+								<p style="margin:0 0 0.5rem;font-size:0.88rem;">
+									<span class="muted">演化自：</span>
+									{ancestors.map((m, i) => (
+										<>
+											{i > 0 && "、"}
+											<a href={`/moves/${m.id}/`}>{m.data.title}</a>
+										</>
+									))}
+								</p>
+							)}
+							{prereqs.length > 0 && (
+								<p style="margin:0 0 0.5rem;font-size:0.88rem;">
+									<span class="muted">前置动作：</span>
+									{prereqs.map((m, i) => (
+										<>
+											{i > 0 && "、"}
+											<a href={`/moves/${m.id}/`}>{m.data.title}</a>
+										</>
+									))}
+								</p>
+							)}
+							{descendants.length > 0 && (
+								<p style="margin:0;font-size:0.88rem;">
+									<span class="muted">被演化：</span>
+									{descendants.map((m, i) => (
+										<>
+											{i > 0 && "、"}
+											<a href={`/moves/${m.id}/`}>{m.data.title}</a>
+										</>
+									))}
+								</p>
+							)}
+						</div>
+					)}
+				</aside>
+			</div>
+		</section>
+
+		<section class="section">
+			<div class="section-head">
+				<h2>展品说明</h2>
+			</div>
+			<div class="prose" style="max-width:70ch;">
+				<Content />
+			</div>
+		</section>
+
+		{move.media.length > 0 && (
+			<section class="section">
+				<div class="section-head">
+					<h2>影像</h2>
+					<span class="more">{move.media.length} 条</span>
+				</div>
+				<div class="grid grid-wide">
+					{move.media.map((m) => (
+						<div class="panel">
+							<p class="en" style="font-family:var(--font-mono);font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">
+								{m.kind}{m.angle ? ` · ${m.angle}` : ""}
+							</p>
+							<p style="margin:0.5rem 0 0.6rem;">
+								{m.url ? <a href={m.url}>{m.url}</a> : <span class="muted">外链待登记</span>}
+							</p>
+							<p class="muted" style="margin:0;font-size:0.82rem;">
+								署名：{m.credit}<br />授权：{m.license}
+							</p>
+						</div>
+					))}
+				</div>
+			</section>
+		)}
+
+		{move.media.length === 0 && (
+			<section class="section">
+				<div class="notice">
+					本条目尚未登记影像。按本站规则，影像必须同时具备<b>署名</b>与<b>授权说明</b>才能上架，
+					外链嵌入与自制素材都走同一条审核线。缺其一的条目会保持「影像待补」状态。
+				</div>
+			</section>
+		)}
+
+		{move.curatorNote && (
+			<section class="section">
+				<div class="section-head">
+					<h2>策展人注</h2>
+				</div>
+				<p class="lede">{move.curatorNote}</p>
+			</section>
+		)}
+
+		<section class="section">
+			<div class="section-head">
+				<h2>来源</h2>
+				<span class="more">{move.sources.length} 条</span>
+			</div>
+			{move.sources.length === 0 ? (
+				<div class="notice">
+					尚无来源。该条目处于「待考据」状态，只描述做法，不对归属与年代作任何主张。
+				</div>
+			) : (
+				<ol class="source-list">
+					{move.sources.map((s) => (
+						<li>
+							<span class="type">{sourceTypeLabel[s.type] ?? s.type}</span>
+							{s.url ? <a href={s.url}>{s.title}</a> : s.title}
+							{(s.author || s.year) && (
+								<span class="muted"> — {[s.author, s.year].filter(Boolean).join("，")}</span>
+							)}
+						</li>
+					))}
+				</ol>
+			)}
+		</section>
+	</div>
+</BaseLayout>

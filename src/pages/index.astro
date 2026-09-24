@@ -1,0 +1,112 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import MoveCard from "../components/MoveCard.astro";
+import StatusBadge from "../components/StatusBadge.astro";
+import { categories } from "../data/categories";
+
+const all = await getCollection("moves");
+const moves = all.sort(
+	(a, b) => a.data.order - b.data.order || a.data.titleEn.localeCompare(b.data.titleEn)
+);
+
+const verified = moves.filter((m) => m.data.status === "verified").length;
+const stubs = moves.filter((m) => m.data.status === "stub");
+const sourceCount = moves.reduce((sum, m) => sum + m.data.sources.length, 0);
+const featured = moves.slice(0, 6);
+
+const counts = new Map<string, number>(
+	categories.map((c) => [c.key, moves.filter((m) => m.data.category === c.key).length])
+);
+---
+
+<BaseLayout>
+	<div class="wrap">
+		<section class="hero">
+			<p class="eyebrow">Cardistry Museum · 线上档案馆</p>
+			<h1>把花切动作从视频流里捞出来，编号、归档、标注来源。</h1>
+			<p class="lede">
+				教程散落在视频平台，讨论沉在论坛，书本只有静态图。这里做的是另一件事——
+				每个动作一个条目，写清分类、难度、前置动作、谱系和最早可查的公开来源。
+				没有来源的条目会被收进馆藏室，而不是直接当成事实。
+			</p>
+			<div class="stats">
+				<div class="stat"><b>{moves.length}</b><span>馆藏动作</span></div>
+				<div class="stat"><b>{verified}</b><span>已核实来源</span></div>
+				<div class="stat"><b>{categories.length}</b><span>动作分类</span></div>
+				<div class="stat"><b>{sourceCount}</b><span>收录出处</span></div>
+			</div>
+		</section>
+
+		<section class="section">
+			<div class="section-head">
+				<h2>动作分类</h2>
+				<a class="more" href="/categories/">全部分类 →</a>
+			</div>
+			<div class="grid grid-wide">
+				{categories.map((category) => (
+					<a class="panel cat-card" href={`/categories/${category.key}/`}>
+						<p class="count">{String(counts.get(category.key) ?? 0).padStart(2, "0")} 件展品</p>
+						<h3>{category.name}</h3>
+						<p class="en">{category.nameEn}</p>
+						<p>{category.blurb}</p>
+					</a>
+				))}
+			</div>
+		</section>
+
+		<section class="section">
+			<div class="section-head">
+				<h2>今日常设展品</h2>
+				<a class="more" href="/moves/">馆藏索引 →</a>
+			</div>
+			<div class="grid grid-moves">
+				{featured.map((entry) => <MoveCard id={entry.id} data={entry.data} />)}
+			</div>
+		</section>
+
+		{stubs.length > 0 && (
+			<section class="section">
+				<div class="section-head">
+					<h2>馆藏室 · 待考据</h2>
+					<span class="more">{stubs.length} 件</span>
+				</div>
+				<div class="notice">
+					<p style="margin:0 0 0.9rem;">
+						这些动作目前只能描述做法，还没找到可靠的首次公开来源。它们被单列出来而不是混进正馆——
+						博物馆的诚实比完整重要。
+					</p>
+					<ul style="margin:0;padding-left:1.1rem;">
+						{stubs.map((entry) => (
+							<li>
+								<a href={`/moves/${entry.id}/`}>{entry.data.title}</a>
+								<span class="muted"> · {entry.data.titleEn}</span>{" "}
+								<StatusBadge status="stub" />
+							</li>
+						))}
+					</ul>
+				</div>
+			</section>
+		)}
+
+		<section class="section">
+			<div class="section-head">
+				<h2>参观方式</h2>
+			</div>
+			<div class="grid grid-wide">
+				<div class="panel">
+					<h3>路人</h3>
+					<p class="muted">从<a href="/random/">随机漫游</a>开始，每次给你一件随机展品，不必按顺序。</p>
+				</div>
+				<div class="panel">
+					<h3>入门</h3>
+					<p class="muted">在<a href="/moves/">馆藏索引</a>里按难度筛到 1–2，按前置动作顺着练。</p>
+				</div>
+				<div class="panel">
+					<h3>老手</h3>
+					<p class="muted">看<a href="/moves/">谱系来源</a>与<a href="/credits/">考据状态</a>：哪些关系有据可查，哪些还只是社区共识。</p>
+				</div>
+			</div>
+		</section>
+	</div>
+</BaseLayout>

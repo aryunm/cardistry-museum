@@ -1,0 +1,27 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { timeline } from "../data/timeline";
+---
+
+<BaseLayout title="史馆" description="花切的时间线：从十九世纪的单手切，到影像时代与线下社群。">
+	<div class="wrap">
+		<section class="section" style="margin-top:3rem;">
+			<p class="eyebrow">Timeline</p>
+			<h1>史馆</h1>
+			<p class="lede">
+				这份时间线刻意写得保守：早期史料的断点很多，与其编一条顺滑的叙述，
+				不如把不确定的地方留着。带「推测」性质的判断一律不写。
+			</p>
+		</section>
+
+		<ul class="timeline">
+			{timeline.map((item) => (
+				<li>
+					<p class="when">{item.when}</p>
+					<h3>{item.title}</h3>
+					<p>{item.body}</p>
+				</li>
+			))}
+		</ul>
+	</div>
+</BaseLayout>

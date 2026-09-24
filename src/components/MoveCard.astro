@@ -1,0 +1,35 @@
+---
+import Difficulty from "./Difficulty.astro";
+import ExhibitPoster from "./ExhibitPoster.astro";
+import StatusBadge from "./StatusBadge.astro";
+import { categoryName } from "../data/categories";
+
+interface Props
+{
+	id: string;
+	data: {
+		title: string;
+		titleEn: string;
+		category: string;
+		difficulty: number;
+		status: "verified" | "disputed" | "stub";
+		media: { poster?: string }[];
+	};
+}
+
+const { id, data } = Astro.props;
+const poster = data.media.find((m) => m.poster)?.poster;
+---
+
+<a class="move-card" href={`/moves/${id}/`} data-category={data.category} data-difficulty={data.difficulty}>
+	<ExhibitPoster titleEn={data.titleEn} poster={poster} hasMedia={data.media.length > 0} />
+	<div class="body">
+		<h3>{data.title}</h3>
+		<p class="en">{data.titleEn}</p>
+		<p class="muted" style="margin:0;font-size:0.8rem;">{categoryName(data.category)}</p>
+		<div class="meta">
+			<Difficulty value={data.difficulty} showLabel={false} />
+			<StatusBadge status={data.status} />
+		</div>
+	</div>
+</a>

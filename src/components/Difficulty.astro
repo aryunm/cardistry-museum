@@ -1,0 +1,15 @@
+---
+interface Props
+{
+	value: number;
+	showLabel?: boolean;
+}
+
+const { value, showLabel = true } = Astro.props;
+const labels = ["入门", "初阶", "进阶", "高阶", "专家"];
+---
+
+<span class="difficulty" title={`难度 ${value}/5 · ${labels[value - 1] ?? ""}`}>
+	{[1, 2, 3, 4, 5].map((n) => <i class={n <= value ? "on" : ""} />)}
+	{showLabel && <em>{labels[value - 1] ?? ""}</em>}
+</span>

@@ -1,0 +1,53 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { glossary } from "../data/glossary";
+---
+
+<BaseLayout title="术语表" description="花切常用术语：包、切、展示、隔离、空中动作、落牌、弹牌、展扇、谱系来源、考据状态。">
+	<div class="wrap">
+		<section class="section" style="margin-top:3rem;">
+			<p class="eyebrow">Glossary</p>
+			<h1>术语表</h1>
+			<p class="lede">
+				术语保留英文原词，因为中文译名在社区里并不统一。条目页展示主名 + 别名，
+				别名的旧链接会被重定向到这里的主条目。
+			</p>
+		</section>
+
+		<section class="section glossary">
+			<dl>
+				{glossary.map((item) => (
+					<div class="entry">
+						<dt>
+							{item.term}
+							<small>{item.zh}</small>
+						</dt>
+						<dd>{item.desc}</dd>
+					</div>
+				))}
+			</dl>
+		</section>
+
+		<section class="section">
+			<div class="section-head">
+				<h2>难度评分规则</h2>
+			</div>
+			<div class="prose" style="max-width:70ch;">
+				<p>
+					难度不是感觉，是三个可核对项的和：<b>前置动作数量</b>、<b>手法复杂度</b>（涉及的包数、
+					是否需要单手完成、是否有离手环节）、<b>社区共识的掌握周期</b>。三项各分 1–2 档，合计映射到 1–5 星。
+				</p>
+				<p>
+					分级的用处不是排名，而是生成参观动线：查看某个动作时，前置动作会直接列在展签旁。
+				</p>
+				<ul>
+					<li>★ 入门：无需前置动作，一小时内可以做出形。</li>
+					<li>★★ 初阶：需要 1 个前置动作，练几周能稳定。</li>
+					<li>★★★ 进阶：需要 2 个以上前置动作，通常要数月。</li>
+					<li>★★★★ 高阶：手法受限严重，多数人停在「偶尔成功」。</li>
+					<li>★★★★★ 专家：长期投入且对成功率有严苛要求的动作。</li>
+				</ul>
+			</div>
+		</section>
+	</div>
+</BaseLayout>

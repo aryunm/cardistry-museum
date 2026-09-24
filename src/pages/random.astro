@@ -1,0 +1,57 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import MoveCard from "../components/MoveCard.astro";
+
+const all = await getCollection("moves");
+const picks = all.sort(() => Math.random() - 0.5).slice(0, 6);
+const ids = all.map((m) => m.id).join(",");
+---
+
+<BaseLayout title="随机漫游" description="随机翻一件展品。">
+	<div class="wrap">
+		<div id="random-root" data-ids={ids} data-base={import.meta.env.BASE_URL}></div>
+
+		<section class="section" style="margin-top:3rem;">
+			<p class="eyebrow">Random Walk</p>
+			<h1>随机漫游</h1>
+			<p class="lede">
+				博物馆不一定要按动线走。这一页每次刷新给你一件随机展品，
+				适合完全不了解花切的人——看爽了再回头看分类结构。
+			</p>
+		</section>
+
+		<section class="section">
+			<div class="section-head">
+				<h2>本次抽到</h2>
+			</div>
+			<div class="grid grid-moves" id="random-grid">
+				{picks.map((entry) => <MoveCard id={entry.id} data={entry.data} />)}
+			</div>
+		</section>
+
+		<section class="section">
+			<div class="section-head">
+				<h2>不想一页页翻？</h2>
+			</div>
+			<p class="lede">
+				直接跳一件随机展品：<button class="chip" id="jump">跳到随机展品</button>
+			</p>
+		</section>
+	</div>
+</BaseLayout>
+
+<script>
+	const root = document.getElementById("random-root");
+	const jump = document.getElementById("jump");
+	if (root && jump)
+	{
+		const ids = (root.dataset.ids ?? "").split(",").filter(Boolean);
+		const base = root.dataset.base ?? "/";
+		jump.addEventListener("click", () =>
+		{
+			const target = ids[Math.floor(Math.random() * ids.length)];
+			location.href = `${base}moves/${target}/`;
+		});
+	}
+</script>

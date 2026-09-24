@@ -1,0 +1,52 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import MoveCard from "../../components/MoveCard.astro";
+import { categories } from "../../data/categories";
+
+export async function getStaticPaths()
+{
+	return categories.map((category) => ({ params: { category: category.key }, props: { category } }));
+}
+
+const { category } = Astro.props;
+const all = await getCollection("moves");
+const items = all
+	.filter((m) => m.data.category === category.key)
+	.sort((a, b) => a.data.difficulty - b.data.difficulty || a.data.titleEn.localeCompare(b.data.titleEn));
+
+const others = categories.filter((c) => c.key !== category.key);
+---
+
+<BaseLayout title={category.name} description={category.blurb}>
+	<div class="wrap">
+		<section class="section" style="margin-top:3rem;">
+			<p class="crumbs">
+				<a href="/categories/">动作分类</a> / {category.nameEn}
+			</p>
+			<p class="eyebrow">{category.nameEn}</p>
+			<h1>{category.name}</h1>
+			<p class="lede">{category.blurb}</p>
+			<p class="muted" style="font-family:var(--font-mono);font-size:0.76rem;letter-spacing:0.12em;">
+				收录 {items.length} 件 · 按难度升序排列
+			</p>
+		</section>
+
+		{items.length === 0 ? (
+			<p class="empty">这个分类还没有展品。</p>
+		) : (
+			<div class="grid grid-moves">
+				{items.map((entry) => <MoveCard id={entry.id} data={entry.data} />)}
+			</div>
+		)}
+
+		<section class="section">
+			<div class="section-head">
+				<h2>相邻分类</h2>
+			</div>
+			<div class="chip-row">
+				{others.map((c) => <a class="chip" href={`/categories/${c.key}/`}>{c.name}</a>)}
+			</div>
+		</section>
+	</div>
+</BaseLayout>

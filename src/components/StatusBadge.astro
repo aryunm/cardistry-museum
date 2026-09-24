@@ -1,0 +1,18 @@
+---
+interface Props
+{
+	status: "verified" | "disputed" | "stub";
+}
+
+const { status } = Astro.props;
+
+const meta = {
+	verified: { text: "已核实", cls: "badge-verified" },
+	disputed: { text: "存疑", cls: "badge-disputed" },
+	stub: { text: "待考据", cls: "" }
+};
+
+const m = meta[status];
+---
+
+<span class={`badge ${m.cls}`}>{m.text}</span>

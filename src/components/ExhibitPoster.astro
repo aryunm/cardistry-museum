@@ -1,0 +1,16 @@
+---
+interface Props
+{
+	titleEn: string;
+	poster?: string;
+	hasMedia?: boolean;
+	wide?: boolean;
+}
+
+const { titleEn, poster, hasMedia = false, wide = false } = Astro.props;
+---
+
+<div class={`poster ${wide ? "poster-wide" : ""}`}>
+	{poster ? <img src={poster} alt={titleEn} loading="lazy" /> : <p class="placeholder">{titleEn}</p>}
+	{!hasMedia && <span class="pending">影像待补</span>}
+</div>

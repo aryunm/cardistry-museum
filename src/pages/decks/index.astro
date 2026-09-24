@@ -1,0 +1,34 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const decks = await getCollection("decks");
+const sorted = decks.sort((a, b) => (a.data.year ?? "").localeCompare(b.data.year ?? ""));
+---
+
+<BaseLayout title="器物馆" description="为花切而生的牌组与厂牌，以及它们在花切史里扮演的角色。">
+	<div class="wrap">
+		<section class="section" style="margin-top:3rem;">
+			<p class="eyebrow">Artifacts</p>
+			<h1>器物馆</h1>
+			<p class="lede">
+				花切的动作和牌组互相塑造：某些动作只有在特定厚度与压纹的牌上才做得出来。
+				这里登记的是有实际影响的那几副，不是牌组图鉴。
+			</p>
+		</section>
+
+		<div class="grid grid-wide">
+			{sorted.map((deck) => (
+				<div class="panel">
+					<p class="count">{deck.data.company}{deck.data.year ? ` · ${deck.data.year}` : ""}</p>
+					<h3>{deck.data.name}</h3>
+					<p class="en">{deck.data.nameEn}</p>
+					<p>{deck.data.summary}</p>
+					{deck.data.designer && (
+						<p class="muted" style="margin:0.7rem 0 0;font-size:0.82rem;">设计：{deck.data.designer}</p>
+					)}
+				</div>
+			))}
+		</div>
+	</div>
+</BaseLayout>

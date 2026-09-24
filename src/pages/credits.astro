@@ -1,0 +1,73 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="版权与致谢" description="本站的影像授权规则、考据标准与撤下通道。">
+	<div class="wrap">
+		<section class="section" style="margin-top:3rem;">
+			<p class="eyebrow">Credits & Policies</p>
+			<h1>版权与致谢</h1>
+			<p class="lede">
+				博物馆的合法性问题不在「能不能放」，而在「有没有写明是谁的」。本站的规则只有一句：
+				<b>没有署名与授权说明的影像，不上架。</b>
+			</p>
+		</section>
+
+		<section class="section">
+			<div class="section-head">
+				<h2>影像授权规则</h2>
+			</div>
+			<div class="prose" style="max-width:70ch;">
+				<p>每个影像资产必须同时具备三项字段，缺一不可：</p>
+				<ul>
+					<li><b>署名 credit</b>：拍摄者与表演者的名字。</li>
+					<li><b>授权 license</b>：授权形式，例如「原作者许可转载」「YouTube 标准嵌入」「CC BY 4.0」。</li>
+					<li><b>原始链接 sourceUrl</b>：可溯源的出处。</li>
+				</ul>
+				<p>
+					优先级从高到低：自制拍摄或已获授权素材 → 平台标准嵌入（外链，不转载）→ 暂缺影像并标注「影像待补」。
+					<b>不使用他人影像的本地副本</b>，即使是二次剪辑。
+				</p>
+			</div>
+		</section>
+
+		<section class="section">
+			<div class="section-head">
+				<h2>考据标准</h2>
+			</div>
+			<div class="prose" style="max-width:70ch;">
+				<ul>
+					<li>不写「发明人」，只写「最早可查的公开来源」。</li>
+					<li>归属或年代存在冲突时，标注为「存疑」并同时列出双方来源，不作裁决。</li>
+					<li>找不到来源的动作收进馆藏室，标注「待考据」，不进正馆。</li>
+					<li>不复制教程正文与书本内容，引用只做短引并给出处。</li>
+				</ul>
+			</div>
+		</section>
+
+		<section class="section">
+			<div class="section-head">
+				<h2>撤下与纠错</h2>
+			</div>
+			<div class="notice">
+				<p style="margin:0 0 0.6rem;">
+					如果你是某段影像的版权方，或不希望自己的作品被收录，请通过项目仓库的 Issue 提出，
+					注明条目编号与资产位置，本站确认后会立即撤下，不做申辩流程。
+				</p>
+				<p style="margin:0;">
+					若发现事实错误（年代、归属、做法描述），同样欢迎指正——请附上来源，本站会连同出处一起更正。
+				</p>
+			</div>
+		</section>
+
+		<section class="section">
+			<div class="section-head">
+				<h2>致谢</h2>
+			</div>
+			<p class="lede">
+				本站的动作知识来自公开的百科条目、论坛讨论、影像教学与出版物。各条目的具体出处按条目列在
+				「来源」一节，本页不重复罗列。
+			</p>
+		</section>
+	</div>
+</BaseLayout>
