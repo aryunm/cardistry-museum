@@ -338,9 +338,9 @@ Cloudflare 适配器不受影响：它把平台的原生 `Request` 直接交给 
 `SITE_URL` 与 `BASE_PATH`（仓库名不等于 `<用户名>.github.io` 时 base 取 `/<仓库名>/`），
 依次跑内容校验、构建、base 链接检查，再上传 `dist/client` 部署。
 
-**首次部署**：工作流里的 `actions/configure-pages` 带 `enablement: true`，会试着自动把 Pages 打开。
-若那一步报权限错，就手动去 **Settings → Pages → Source 选 GitHub Actions** 再重跑一次。
-仓库公开，Pages 才免费。
+**首次部署前必须先手动打开 Pages**：**Settings → Pages → Source 选 GitHub Actions**。
+用 `GITHUB_TOKEN` 建 Pages 站点会被拒（`Resource not accessible by integration`），
+所以工作流里不做这件事，只能人工开一次。仓库公开，Pages 才免费。
 
 本地复现同样的构建：
 
