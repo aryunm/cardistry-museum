@@ -15,6 +15,7 @@
 ```powershell
 npm install --cache .npm-cache   # 本机 npm 全局缓存目录无写权限，故用项目内缓存
 npm run dev                      # http://localhost:4321
+npm run validate                 # 内容规则校验（CI 跑的就是这个）
 npm run build                    # 产物输出到 dist/
 npm run preview                  # 预览构建产物
 ```
@@ -108,6 +109,34 @@ sources:
 优先级：自制拍摄或已获授权素材 → 平台标准嵌入（外链，不转载）→ 暂缺影像并显示「影像待补」。
 
 **不使用他人影像的本地副本**，即使是二次剪辑。撤下请求按 `/credits/` 页面的说明处理。
+
+## 内容校验与 CI
+
+`npm run validate` 跑 `scripts/validate-content.mjs`，在构建之前把规矩查一遍。
+它读 `src/content/` 里的 frontmatter，规则如下：
+
+**错误（会失败）**
+
+| 规则 | 理由 |
+| --- | --- |
+| `category` 必须存在于 `data/categories.ts` | 防止写错分类后静默变成死条目 |
+| `difficulty` 必须是 1–5 的整数 | 难度分级不给约束就会有人写 3.5 |
+| `status: stub` 时不得填 `creators` / `firstPublicYear` | 待考据条目不许猜归属和年代 |
+| `status: verified` / `disputed` 必须至少有一条 `sources` | 有主张就要有出处 |
+| 媒体资产必须同时有 `credit` 与 `license` | 缺一就不许上架 |
+| 本地路径影像只允许 `provider: self` | 禁止存放他人影像的本地副本 |
+| `creators` / `prerequisites` / `derivedFrom` 必须指向真实条目 | 引用完整性 |
+| `derivedFrom` 必须有向无环 | 谱系图一旦成环就画不出来 |
+| `titleEn` 唯一 | 同名动作会互相覆盖 |
+
+**提醒（不失败）**
+
+媒体缺 `sourceUrl`、正文为空、`order` 重复、分类下暂时没有条目。
+
+`.github/workflows/ci.yml` 在 push 与 PR 时依次跑 `npm ci` → `npm run validate` → `npm run build`。
+校验器与 Astro 的 zod Schema 是两层：前者管业务规矩，后者管字段类型，`media` 缺 `license` 时两边都会报。
+
+需要本地复现 CI 而手上没有远端时，直接跑 `npm run validate && npm run build` 即可。
 
 ## 部署到 GitHub Pages
 
